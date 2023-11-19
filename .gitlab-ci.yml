@@ -22,8 +22,9 @@ setup_job:
 clang_format_job:
   stage: lint
   script:
-    - clang-format -i -style=file $(find . -iname *.h -o -iname *.c)
-    - git diff --exit-code
+    - unformatted_count=$(find . -iname "*.h" -o -iname "*.c" | xargs clang-format -style=file -output-replacements-xml | grep -c "<replacement ")
+    - echo "Unformatted files count: $unformatted_count"
+    - if [ $unformatted_count -ne 0 ]; then exit 1; fi
   only:
     - branches
     - merge_requests
