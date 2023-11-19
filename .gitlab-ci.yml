@@ -1,0 +1,45 @@
+image: debian:latest
+
+stages:
+  - setup
+  - build
+  - test
+
+before_script:
+  - apt-get update
+  - apt-get install -y gcc make valgrind
+
+setup_job:
+  stage: setup
+  script:
+    - gcc --version
+    - make --version
+    - valgrind --version
+  only:
+    - branches
+    - merge_requests
+
+build_job:
+  stage: build
+  script:
+    - make
+  artifacts:
+    paths:
+      - ./bin/
+      - ./obj/
+  only:
+    - branches
+    - merge_requests
+
+test_job:
+  stage: test
+  script:
+    - make test
+  artifacts:
+    when: always
+    paths:
+      - ./bin/
+      - ./obj/
+  only:
+    - branches
+    - merge_requests
