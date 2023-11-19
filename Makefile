@@ -9,6 +9,10 @@ INCLUDES = -I include
 VALGRIND = valgrind
 VFLAGS = --leak-check=full --show-leak-kinds=all --track-origins=yes --verbose
 
+# Code formatting tool
+CLANG_FORMAT = clang-format
+FORMAT_FLAGS = -i
+
 # Project structure
 SRCDIR = src
 BUILTINDIR = $(SRCDIR)/builtins
@@ -49,9 +53,13 @@ test: $(EXECUTABLE)
 run: $(EXECUTABLE)
 	./$(EXECUTABLE)
 
+# Code formatting
+format:
+	$(CLANG_FORMAT) $(FORMAT_FLAGS) $(SOURCES) $(wildcard include/*.h)
+
 # Cleaning up
 clean:
 	rm -rf $(OBJDIR) $(BINDIR)
 
 # Phony targets
-.PHONY: all clean test
+.PHONY: all clean test format

@@ -4,10 +4,11 @@ stages:
   - setup
   - build
   - test
+  - format_check
 
 before_script:
   - apt-get update
-  - apt-get install -y gcc make valgrind
+  - apt-get install -y gcc make valgrind clang-format
 
 setup_job:
   stage: setup
@@ -15,6 +16,7 @@ setup_job:
     - gcc --version
     - make --version
     - valgrind --version
+    - clang-format --version
   only:
     - branches
     - merge_requests
@@ -40,6 +42,15 @@ test_job:
     paths:
       - ./bin/
       - ./obj/
+  only:
+    - branches
+    - merge_requests
+
+format_check_job:
+  stage: format_check
+  script:
+    - find . -iname *.h -o -iname *.cpp | xargs clang-format -style=file -output-replacements-xml | grep "<replacement " >/dev/null
+    - if [ $? -ne 1 ]; then echo "Code style issues found"; exit 1; fi
   only:
     - branches
     - merge_requests
