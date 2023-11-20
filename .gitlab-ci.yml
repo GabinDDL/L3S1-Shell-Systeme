@@ -2,9 +2,9 @@ image: debian:latest
 
 stages:
   - setup
-  - lint
   - build
   - test
+  - check-format
 
 before_script:
   - apt-get update
@@ -18,17 +18,6 @@ setup_job:
   stage: setup
   script:
     - echo "Setup completed"
-
-clang_format_job:
-  stage: lint
-  script:
-    - |
-      unformatted_count=$(find . -iname "*.h" -o -iname "*.c" | xargs clang-format -style=file -output-replacements-xml | grep -c "<replacement ")
-      echo "Unformatted files count: $unformatted_count"
-      if [ $unformatted_count -ne 0 ]; then exit 1; fi
-  only:
-    - branches
-    - merge_requests
 
 build_job:
   stage: build
@@ -51,6 +40,14 @@ test_job:
     paths:
       - ./bin/
       - ./obj/
+  only:
+    - branches
+    - merge_requests
+
+check_format_job:
+  stage: check-format
+  script:
+    - make check-format
   only:
     - branches
     - merge_requests

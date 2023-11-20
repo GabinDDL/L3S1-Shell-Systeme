@@ -57,6 +57,10 @@ run: $(EXECUTABLE)
 format:
 	$(CLANG_FORMAT) $(FORMAT_FLAGS) $(SOURCES) $(wildcard include/*.h)
 
+# Check code formatting
+check-format:
+	$(CLANG_FORMAT) --dry-run --Werror $(SOURCES) $(wildcard include/*.h)
+
 # Cleaning up
 clean:
 	rm -rf $(OBJDIR) $(BINDIR)
