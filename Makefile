@@ -7,7 +7,7 @@ INCLUDES = -I include
 
 # Valgrind options
 VALGRIND = valgrind
-VFLAGS = --leak-check=full --show-leak-kinds=all --track-origins=yes --verbose
+VFLAGS = --leak-check=full --show-leak-kinds=all --track-origins=yes --errors-for-leak-kinds=all
 
 # Code formatting tool
 CLANG_FORMAT = clang-format
