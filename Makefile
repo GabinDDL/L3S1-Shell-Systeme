@@ -17,23 +17,30 @@ FORMAT_FLAGS = -i
 SRCDIR = src
 BUILTINDIR = $(SRCDIR)/builtins
 UTILSDIR = $(SRCDIR)/utils
+PARSERDIR = $(SRCDIR)/parser
 TESTDIR = tests
+BUILTINTESTDIR = $(TESTDIR)/builtins
+UTILSTESTDIR = $(TESTDIR)/utils
+PARSERTESTDIR = $(TESTDIR)/parser
 OBJDIR = obj
 BINDIR = bin
 
 # Source, object, and test files
-SOURCES = $(wildcard $(SRCDIR)/*.c) $(wildcard $(BUILTINDIR)/*.c) $(wildcard $(UTILSDIR)/*.c)
-OBJECTS = $(SOURCES:$(SRCDIR)/%.c=$(OBJDIR)/%.o)
-TESTS = $(wildcard $(TESTDIR)/*.c)
+SOURCES = $(wildcard $(SRCDIR)/*.c) $(wildcard $(BUILTINDIR)/*.c) $(wildcard $(UTILSDIR)/*.c) $(wildcard $(PARSERDIR)/*.c)
+APP_SOURCES = $(filter-out $(SRCDIR)/main.c, $(SOURCES))
+APP_OBJECTS = $(patsubst $(SRCDIR)/%.c,$(OBJDIR)/%.o,$(APP_SOURCES))
+TEST_SOURCES = $(wildcard $(TESTDIR)/*.c) $(wildcard $(BUILTINTESTDIR)/*.c) $(wildcard $(UTILSTESTDIR)/*.c) $(wildcard $(PARSERTESTDIR)/*.c)
+TEST_OBJECTS = $(APP_OBJECTS) $(patsubst $(TESTDIR)/%.c,$(OBJDIR)/%.o,$(TEST_SOURCES))
 
-# Executable name
+# Executable names
 EXECUTABLE = $(BINDIR)/jsh
+TEST_EXECUTABLE = $(BINDIR)/test_main
 
 # Default target
 all: $(EXECUTABLE)
 
 # Linking the executable
-$(EXECUTABLE): $(OBJECTS)
+$(EXECUTABLE): $(APP_OBJECTS) $(OBJDIR)/main.o
 	@mkdir -p $(BINDIR)
 	$(CC) $(CFLAGS) $(INCLUDES) $^ -o $@
 
@@ -42,12 +49,21 @@ $(OBJDIR)/%.o: $(SRCDIR)/%.c
 	@mkdir -p $(@D)
 	$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $@
 
+# Compiling test source files
+$(OBJDIR)/%.o: $(TESTDIR)/%.c
+	@mkdir -p $(@D)
+	$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $@
+
+# Compile the test executable
+$(TEST_EXECUTABLE): $(TEST_OBJECTS)
+	@mkdir -p $(BINDIR)
+	$(CC) $(CFLAGS) $(INCLUDES) $^ -o $@
+
 # Running tests with Valgrind
-test: $(EXECUTABLE)
-	@for test in $(TESTS); do \
-		echo "Running $$test with Valgrind"; \
-		$(VALGRIND) $(VFLAGS) ./$(EXECUTABLE) < $$test; \
-	done
+test: $(TEST_EXECUTABLE)
+	@echo "Running tests with Valgrind"
+	$(VALGRIND) $(VFLAGS) ./$(TEST_EXECUTABLE)
+	@echo "Tests completed"
 
 # Run the executable
 run: $(EXECUTABLE)
@@ -66,4 +82,4 @@ clean:
 	rm -rf $(OBJDIR) $(BINDIR)
 
 # Phony targets
-.PHONY: all clean test format
+.PHONY: all clean test format run
