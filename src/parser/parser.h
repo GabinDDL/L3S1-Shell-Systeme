@@ -32,4 +32,6 @@ typedef struct {
     command *commands;
 } pipeline;
 
+command *parse_command(char *input);
+
 #endif
