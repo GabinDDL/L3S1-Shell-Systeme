@@ -1,41 +1,130 @@
+#include <assert.h>
+
 #include "test_parser.h"
 
-int test_parse_command() {
-    char* input = "ls -l /home";
-    int test_failed = 0;
+void test_parse_command_no_arguments();
+void test_parse_command_two_arguments();
+void test_parse_command_with_empty_input();
+void test_parse_command_with_only_spaces();
+void test_parse_command_with_spaces_between();
+void test_parse_command_with_spaces_before();
+
+void test_parser_utils() {
+
+    printf("Test function test_parse_command_no_arguments\n");
+    test_parse_command_no_arguments();
+    printf("Test test_parse_command_no_arguments passed\n");
+
+    printf("Test function test_parse_command_two_arguments\n");
+    test_parse_command_two_arguments();
+    printf("Test test_parse_command_two_arguments passed\n");
+
+    printf("Test function parse_command_with_empty_input\n");
+    test_parse_command_with_empty_input();
+    printf("Test parse_command_with_empty_input passed\n");
+
+    printf("Test function parse_command_with_only_spaces\n");
+    test_parse_command_with_only_spaces();
+    printf("Test parse_command_with_only_spaces passed\n");
+
+    printf("Test function parse_command_with_spaces_between\n");
+    test_parse_command_with_spaces_between();
+    printf("Test parse_command_with_spaces_between passed\n");
+
+    printf("Test function parse_command_with_spaces_before\n");
+    test_parse_command_with_spaces_before();
+    printf("Test parse_command_with_spaces_before passed\n");
+}
+
+void test_parse_command_no_arguments() {
+    char *input = "ls";
 
     // Call the function to test
     command *cmd = parse_command(input);
 
     // Check if the command name is correct
-    if (strcmp(cmd->name, "ls") != 0) {
-        printf("Test failed: Command name is incorrect.\n");
-        test_failed = 1;
-    }
+    assert(strcmp(cmd->name, "ls") == 0);
 
     // Check the correct number of arguments
-    if (cmd->argc != 2) {
-        printf("Test failed: Incorrect number of arguments.\n");
-        test_failed = 1;
-    }
-
-    // Check if the arguments are correct
-    if (strcmp(cmd->argv[0], "-l") != 0 || strcmp(cmd->argv[1], "/home") != 0) {
-        printf("Test failed: Arguments are incorrect.\n");
-        test_failed = 1;
-    }
+    assert(cmd->argc == 0);
 
     // Clean up
-    for (int i = 0; i < cmd->argc; i++) {
-        free(cmd->argv[i]);
-    }
-    free(cmd->argv);
-    free(cmd->name);
-    free(cmd);
+    free_command(cmd);
+}
 
-    if (!test_failed) {
-        printf("parse_command test passed.\n");
-    }
+void test_parse_command_two_arguments() {
+    char *input = "ls -l /home";
 
-    return test_failed;
+    // Call the function to test
+    command *cmd = parse_command(input);
+
+    // Check if the command name is correct
+    assert(strcmp(cmd->name, "ls") == 0);
+
+    // Check the correct number of arguments
+    assert(cmd->argc == 2);
+
+    // Check if the arguments are correct
+    assert(strcmp(cmd->argv[0], "-l") == 0 && strcmp(cmd->argv[1], "/home") == 0);
+
+    // Clean up
+    free_command(cmd);
+}
+
+void test_parse_command_with_empty_input() {
+    char *input = "";
+
+    // Call the function to test
+    command *cmd = parse_command(input);
+
+    // Check if the command is NULL (invalid input)
+    assert(cmd == NULL);
+}
+
+void test_parse_command_with_only_spaces() {
+    char *input = "     ";
+
+    // Call the function to test
+    command *cmd = parse_command(input);
+
+    // Check if the command is NULL (invalid input)
+    assert(cmd == NULL);
+}
+
+void test_parse_command_with_spaces_between() {
+    char *input = "ls     -l     /home";
+
+    // Call the function to test
+    command *cmd = parse_command(input);
+
+    // Check if the command name is correct
+    assert(strcmp(cmd->name, "ls") == 0);
+
+    // Check the correct number of arguments
+    assert(cmd->argc == 2);
+
+    // Check if the arguments are correct
+    assert(strcmp(cmd->argv[0], "-l") == 0 && strcmp(cmd->argv[1], "/home") == 0);
+
+    // Clean up
+    free_command(cmd);
+}
+
+void test_parse_command_with_spaces_before() {
+    char *input = "     ls -l /home";
+
+    // Call the function to test
+    command *cmd = parse_command(input);
+
+    // Check if the command name is correct
+    assert(strcmp(cmd->name, "ls") == 0);
+
+    // Check the correct number of arguments
+    assert(cmd->argc == 2);
+
+    // Check if the arguments are correct
+    assert(strcmp(cmd->argv[0], "-l") == 0 && strcmp(cmd->argv[1], "/home") == 0);
+
+    // Clean up
+    free_command(cmd);
 }

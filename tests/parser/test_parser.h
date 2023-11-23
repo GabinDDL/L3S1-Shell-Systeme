@@ -7,6 +7,6 @@
 
 #include "../../src/parser/parser.h"
 
-int test_parse_command();
+void test_parser_utils();
 
 #endif

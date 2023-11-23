@@ -4,7 +4,12 @@
 
 int main() {
     printf("Running tests...\n");
-    assert(test_parse_command() == 0);
-    printf("All tests passed!\n");
+
+    printf("Running test parser_utils\n");
+    test_parser_utils();
+    printf("Test parser_utils passed\n");
+
+    printf("All test cases passed!\n");
+
     return 0;
 }

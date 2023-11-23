@@ -6,9 +6,13 @@
 #include "parser.h"
 
 #define MAX_TOKENS 256
-#define MAX_TOKEN_SIZE 256
 #define TOKEN_DELIM " "
 
+/*
+ * Frees the array of tokens.
+ * The tokens must have been allocated with malloc.
+ * The token_count must be the number of tokens in the array.
+ */
 void free_tokens(char **tokens, int token_count) {
     int i = 0;
     for (i = 0; i < token_count; ++i) {
@@ -17,7 +21,14 @@ void free_tokens(char **tokens, int token_count) {
     free(tokens);
 }
 
-char **tokenize(char *input, int *token_count) {
+/*
+ * Tokenizes the input string into an array of tokens.
+ * The tokens are separated by whitespace.
+ * The token_count is set to the number of tokens.
+ * The returned array of tokens must be freed by the caller.
+ * Returns NULL if the input string is empty or if there is an error.
+ */
+char **tokenize(const char *input, int *token_count) {
     char *mutable_input = strdup(input);
 
     char **tokens = malloc(MAX_TOKENS * sizeof(char *));
@@ -27,12 +38,13 @@ char **tokenize(char *input, int *token_count) {
     int i = 0;
     for (char *token = strtok(mutable_input, TOKEN_DELIM); token != NULL && i < MAX_TOKENS;
          token = strtok(NULL, TOKEN_DELIM)) {
-        tokens[i] = malloc(MAX_TOKEN_SIZE * sizeof(char));
+        size_t token_length = strlen(token);
+        tokens[i] = malloc(sizeof(char) * (token_length + 1));
         if (tokens[i] == NULL) {
             free_tokens(tokens, i);
             return NULL;
         }
-        strcpy(tokens[i], token);
+        strncpy(tokens[i], token, token_length + 1);
         ++i;
     }
 
@@ -43,7 +55,7 @@ char **tokenize(char *input, int *token_count) {
     return tokens;
 }
 
-command *parse_command(char *input) {
+command *parse_command(const char *input) {
     int token_count = 0;
     char **tokens = tokenize(input, &token_count);
 
@@ -76,10 +88,32 @@ command *parse_command(char *input) {
     }
     cmd->argv[cmd->argc] = NULL;
 
+    // TODO: Parse redirections
     cmd->redirection_count = 0;
     cmd->redirections = NULL;
 
     free_tokens(tokens, token_count);
 
     return cmd;
+}
+
+void free_command(command *cmd) {
+    if (cmd == NULL) {
+        return;
+    }
+
+    free(cmd->name);
+
+    int i = 0;
+    for (i = 0; i < cmd->argc; ++i) {
+        free(cmd->argv[i]);
+    }
+    free(cmd->argv);
+
+    for (i = 0; i < cmd->redirection_count; ++i) {
+        free(cmd->redirections[i].filename);
+    }
+    free(cmd->redirections);
+
+    free(cmd);
 }
