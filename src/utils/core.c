@@ -1,14 +1,14 @@
 #include <math.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <uchar.h>
 #include <unistd.h>
 
 #include "constants.h"
 #include "core.h"
 
-char *pwd;
+char *current_folder;
 char *prompt;
 int job_number = 0;
 int last_command_exit_value = 0;
@@ -23,16 +23,20 @@ int init_core() {
         print_error("Cannot allocate a memory zone");
         return FATAL_ERROR;
     }
-    size_t len_home = strlen(HOME);
-    pwd = malloc(len_home + 1);
-
-    if (pwd == NULL) {
-        print_error("Cannot allocate a memory zone.");
-        return FATAL_ERROR;
-    }
-    memmove(pwd, HOME, len_home + 1);
 
     prompt = malloc(0); /* TODO */
+
+    if (update_pwd(HOME) != SUCCESS) {
+        print_error("Cannot access to $HOME.");
+        return FATAL_ERROR;
+    }
+
+    if (update_current_folder()) {
+        print_error("Cannot access to $PWD.");
+        return FATAL_ERROR;
+    }
+
+    size_t len_home = strlen(HOME);
     last_reference_position = malloc(len_home + 1);
 
     if (last_reference_position == NULL) {
@@ -41,17 +45,12 @@ int init_core() {
     }
     memmove(last_reference_position, HOME, len_home + 1);
 
-    if (chdir(pwd) != 0) {
-        print_error("Cannot move into $HOME folder.");
-        return FATAL_ERROR;
-    }
-
     return SUCCESS;
 }
 
 int free_core() {
-    if (pwd != NULL) {
-        free(pwd);
+    if (current_folder != NULL) {
+        free(current_folder);
     }
     if (last_reference_position != NULL) {
         free(last_reference_position);
@@ -59,5 +58,25 @@ int free_core() {
     if (prompt != NULL) {
         free(prompt);
     }
+    return SUCCESS;
+}
+
+int update_pwd(const char *path) {
+    if (chdir(path) != 0) {
+        return COMMAND_FAILURE;
+    }
+    return SUCCESS;
+}
+
+int update_current_folder() {
+    char *new_current_folder = getcwd(NULL, 0);
+
+    if (new_current_folder == NULL) {
+        return FATAL_ERROR;
+    }
+    if (current_folder != NULL) {
+        free(current_folder);
+    }
+    current_folder = new_current_folder;
     return SUCCESS;
 }
