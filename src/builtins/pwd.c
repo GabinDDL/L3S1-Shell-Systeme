@@ -7,7 +7,7 @@
 
 int pwd(const command *cmd) {
     if (cmd->argc != 1) {
-        fprintf(stderr, "pwd: too many arguments\n");
+        print_error("pwd: too many arguments\n");
         return COMMAND_FAILURE;
     }
     printf("%s\n", current_folder);

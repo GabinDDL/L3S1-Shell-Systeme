@@ -37,7 +37,7 @@ int init_core() {
     }
 
     size_t len_home = strlen(HOME);
-    last_reference_position = malloc(len_home + 1);
+    last_reference_position = malloc((len_home + 1) * sizeof(char));
 
     if (last_reference_position == NULL) {
         print_error("Cannot allocate a memory zone.");
@@ -72,11 +72,13 @@ int update_current_folder() {
     char *new_current_folder = getcwd(NULL, 0);
 
     if (new_current_folder == NULL) {
+        print_error("Cannot allocate a memory zone.");
         return FATAL_ERROR;
     }
-    if (current_folder != NULL) {
-        free(current_folder);
+    if (last_reference_position != NULL) {
+        free(last_reference_position);
     }
+    last_reference_position = current_folder;
     current_folder = new_current_folder;
     return SUCCESS;
 }

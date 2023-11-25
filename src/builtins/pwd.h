@@ -4,5 +4,7 @@
 #include "../parser/parser.h"
 
 int pwd(const command *cmd);
+/* Displays the absolute physical reference of the current
+ * directory. */
 
 #endif
