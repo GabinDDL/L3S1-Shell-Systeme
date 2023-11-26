@@ -8,7 +8,7 @@ stages:
 
 before_script:
   - apt-get update
-  - apt-get install -y gcc make valgrind clang-format
+  - apt-get install -y gcc make valgrind clang-format libreadline-dev
   - gcc --version
   - make --version
   - valgrind --version

@@ -16,6 +16,9 @@ extern char *last_reference_position; // last user location, initialized with HO
 void print_error(const char *);
 // print the error message on error output
 
+int update_prompt();
+//update the prompt according to  the current position
+
 int init_core();
 // initialize constants and then initialize the variables that need them: pwd, prompt and last_reference_position
 

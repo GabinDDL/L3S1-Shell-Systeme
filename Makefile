@@ -4,6 +4,7 @@
 CC = gcc
 CFLAGS = -Wall -g
 INCLUDES = -I include
+LIBRARY = -lncurses -lreadline -lm
 
 # Valgrind options
 VALGRIND = valgrind
@@ -42,22 +43,22 @@ all: $(EXECUTABLE)
 # Linking the executable
 $(EXECUTABLE): $(APP_OBJECTS) $(OBJDIR)/main.o
 	@mkdir -p $(BINDIR)
-	$(CC) $(CFLAGS) $(INCLUDES) $^ -o $@
+	$(CC) $(CFLAGS) $(INCLUDES) $^ -o $@ $(LIBRARY)
 
 # Compiling source files
 $(OBJDIR)/%.o: $(SRCDIR)/%.c
 	@mkdir -p $(@D)
-	$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $@
+	$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $@ $(LIBRARY)
 
 # Compiling test source files
 $(OBJDIR)/%.o: $(TESTDIR)/%.c
 	@mkdir -p $(@D)
-	$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $@
+	$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $@ $(LIBRARY)
 
 # Compile the test executable
 $(TEST_EXECUTABLE): $(TEST_OBJECTS)
 	@mkdir -p $(BINDIR)
-	$(CC) $(CFLAGS) $(INCLUDES) $^ -o $@
+	$(CC) $(CFLAGS) $(INCLUDES) $^ -o $@ $(LIBRARY)
 
 # Running tests with Valgrind
 test: $(TEST_EXECUTABLE)

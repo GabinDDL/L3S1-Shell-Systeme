@@ -1,6 +1,8 @@
 #ifndef CONSTANTS_H
 #define CONSTANTS_H
 
+#include <stdlib.h>
+
 /* ENVIRONMENT VARIABLES */
 
 extern const char *HOME;
@@ -21,6 +23,11 @@ extern const int SUCCESS;
 extern const int COMMAND_FAILURE;
 extern const int FATAL_ERROR;
 extern const int COMMAND_NOT_FOUND;
+
+/* PROMPT DATA*/
+
+extern const size_t PROMPT_MAX_VISIBLE_LEN; //the maximum length of the prompt (color characters not included)
+extern const size_t LITTERAL_CHARS_COUNT; //the number of litteral characters in the prompt (braces, $ and space)
 
 /* FUNCTIONS */
 

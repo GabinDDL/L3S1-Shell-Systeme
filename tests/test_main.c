@@ -3,6 +3,7 @@
 #include "parser/test_parser.h"
 
 #include "test_string_utils.h"
+#include "test_int_utils.h"
 
 int main() {
     printf("Running tests...\n");
@@ -13,6 +14,9 @@ int main() {
     printf("Running test string_utils\n");
     test_string_utils();
     printf("Test string_utils passed\n");
+    printf("Running test int_utils\n");
+    test_int_utils();
+    printf("Test int_utils passed\n");
 
     printf("All test cases passed!\n");
 
