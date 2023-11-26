@@ -6,7 +6,7 @@
 #include "pwd.h"
 
 int pwd(const command *cmd) {
-    if (cmd->argc != 0) {
+    if (cmd->argc != 1) {
         fprintf(stderr, "pwd: too many arguments\n");
         return COMMAND_FAILURE;
     }

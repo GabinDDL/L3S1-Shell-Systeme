@@ -1,6 +1,14 @@
 #ifndef PARSER_H
 #define PARSER_H
 
+#include <stddef.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#define MAX_TOKENS 256
+#define TOKEN_DELIM " "
+
 typedef enum {
     REDIRECT_STDIN,
     REDIRECT_STDOUT,
@@ -31,9 +39,9 @@ typedef struct {
 
 typedef struct {
     char *name;
-    int argc;
+    size_t argc;
     char **argv;
-    int redirection_count;
+    size_t redirection_count;
     redirection *redirections;
 } command;
 /*
@@ -41,7 +49,7 @@ typedef struct {
     * For example, the command "ls -l > output.txt" would be parsed as:
     *  - name: "ls"
     *  - argc: 2
-    *  - argv: ["ls", "-l"]
+    *  - argv: ["ls", "-l", NULL]
     *  - redirection_count: 1
     *  - redirections: [
     *      {
@@ -53,7 +61,7 @@ typedef struct {
 */
 
 typedef struct {
-    int command_count;
+    size_t command_count;
     command *commands;
 } pipeline;
 /*
@@ -64,14 +72,14 @@ typedef struct {
     *      {
     *          name: "ls",
     *          argc: 2,
-    *          argv: ["ls", "-l"],
+    *          argv: ["ls", "-l", NULL],
     *          redirection_count: 0,
     *          redirections: []
     *      },
     *      {
     *          name: "grep",
-    *          argc: 1,
-    *          argv: ["grep", "foo"],
+    *          argc: 2,
+    *          argv: ["grep", "foo", NULL],
     *          redirection_count: 0,
     *          redirections: []
     *      }

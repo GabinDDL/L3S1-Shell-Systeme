@@ -1,20 +1,12 @@
-#include <stddef.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
 #include "parser.h"
-
-#define MAX_TOKENS 256
-#define TOKEN_DELIM " "
 
 /*
  * Frees the array of tokens.
  * The tokens must have been allocated with malloc.
  * The token_count must be the number of tokens in the array.
  */
-void free_tokens(char **tokens, int token_count) {
-    int i = 0;
+void free_tokens(char **tokens, size_t token_count) {
+    size_t i = 0;
     for (i = 0; i < token_count; ++i) {
         free(tokens[i]);
     }
@@ -28,14 +20,14 @@ void free_tokens(char **tokens, int token_count) {
  * The returned array of tokens must be freed by the caller.
  * Returns NULL if the input string is empty or if there is an error.
  */
-char **tokenize(const char *input, int *token_count) {
+char **tokenize(const char *input, size_t *token_count) {
     char *mutable_input = strdup(input);
 
     char **tokens = malloc(MAX_TOKENS * sizeof(char *));
     if (tokens == NULL) {
         return NULL;
     }
-    int i = 0;
+    size_t i = 0;
     for (char *token = strtok(mutable_input, TOKEN_DELIM); token != NULL && i < MAX_TOKENS;
          token = strtok(NULL, TOKEN_DELIM)) {
         size_t token_length = strlen(token);
@@ -56,7 +48,7 @@ char **tokenize(const char *input, int *token_count) {
 }
 
 command *parse_command(const char *input) {
-    int token_count = 0;
+    size_t token_count = 0;
     char **tokens = tokenize(input, &token_count);
 
     if (token_count == 0) {
@@ -72,7 +64,7 @@ command *parse_command(const char *input) {
     }
 
     cmd->name = strdup(tokens[0]);
-    cmd->argc = token_count - 1;
+    cmd->argc = token_count; // Takes into account the command name
     cmd->argv = malloc(sizeof(char *) * (cmd->argc + 1));
 
     if (cmd->argv == NULL) {
@@ -82,9 +74,9 @@ command *parse_command(const char *input) {
         return NULL;
     }
 
-    int i = 0;
+    size_t i = 0;
     for (i = 0; i < cmd->argc; ++i) {
-        cmd->argv[i] = strdup(tokens[i + 1]);
+        cmd->argv[i] = strdup(tokens[i]);
     }
     cmd->argv[cmd->argc] = NULL;
 
@@ -104,8 +96,8 @@ void free_command(command *cmd) {
 
     free(cmd->name);
 
-    int i = 0;
-    for (i = 0; i < cmd->argc; ++i) {
+    size_t i = 0;
+    for (i = 0; i <= cmd->argc; ++i) {
         free(cmd->argv[i]);
     }
     free(cmd->argv);
