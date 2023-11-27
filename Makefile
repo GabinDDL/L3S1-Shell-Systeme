@@ -19,10 +19,12 @@ SRCDIR = src
 BUILTINDIR = $(SRCDIR)/builtins
 UTILSDIR = $(SRCDIR)/utils
 PARSERDIR = $(SRCDIR)/parser
+
 TESTDIR = tests
 BUILTINTESTDIR = $(TESTDIR)/builtins
 UTILSTESTDIR = $(TESTDIR)/utils
 PARSERTESTDIR = $(TESTDIR)/parser
+
 OBJDIR = obj
 BINDIR = bin
 
@@ -35,15 +37,19 @@ TEST_OBJECTS = $(APP_OBJECTS) $(patsubst $(TESTDIR)/%.c,$(OBJDIR)/%.o,$(TEST_SOU
 
 # Executable names
 EXECUTABLE = $(BINDIR)/jsh
+COPY_EXECUTABLE = jsh
 TEST_EXECUTABLE = $(BINDIR)/test_main
 
 # Default target
-all: $(EXECUTABLE)
+all: $(EXECUTABLE) $(COPY_EXECUTABLE)
 
 # Linking the executable
 $(EXECUTABLE): $(APP_OBJECTS) $(OBJDIR)/main.o
 	@mkdir -p $(BINDIR)
 	$(CC) $(CFLAGS) $(INCLUDES) $^ -o $@ $(LIBRARY)
+
+$(COPY_EXECUTABLE): $(EXECUTABLE)
+	cp $(EXECUTABLE) $(COPY_EXECUTABLE)
 
 # Compiling source files
 $(OBJDIR)/%.o: $(SRCDIR)/%.c
@@ -80,7 +86,7 @@ check-format:
 
 # Cleaning up
 clean:
-	rm -rf $(OBJDIR) $(BINDIR)
+	rm -rf $(OBJDIR) $(BINDIR) $(COPY_EXECUTABLE)
 
 # Phony targets
 .PHONY: all clean test format run
