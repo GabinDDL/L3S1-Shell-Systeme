@@ -2,8 +2,8 @@
 #include <assert.h>
 #include "parser/test_parser.h"
 
-#include "test_string_utils.h"
-#include "test_int_utils.h"
+#include "utils/test_string_utils.h"
+#include "utils/test_int_utils.h"
 
 int main() {
     printf("Running tests...\n");

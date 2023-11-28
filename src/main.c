@@ -4,6 +4,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "parser/parser.h"
+#include "run/run.h"
 #include "utils/constants.h"
 #include "utils/core.h"
 
@@ -14,11 +16,35 @@ int main() {
     }
 
     rl_outstream = stderr;
-    last_line_read = readline(prompt);
-    add_history(last_line_read);
+    while (1) {
+        char *line = readline(prompt);
+        if (line == NULL) {
+            break;
+        }
+        add_history(line);
 
-    printf("%s\n", last_line_read);
+        command *cmd = parse_command(line);
+
+        if (cmd == NULL) {
+            free(line);
+            continue;
+        }
+
+        int run_output = run_command(cmd);
+
+        if (run_output == FATAL_ERROR) {
+            free(line);
+            free_command(cmd);
+            free_core();
+            return EXIT_FAILURE;
+        }
+
+        last_command_exit_value = run_output;
+
+        free(line);
+        free_command(cmd);
+    }
 
     free_core();
-    return 0;
+    return last_command_exit_value;
 }

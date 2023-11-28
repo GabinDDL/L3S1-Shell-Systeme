@@ -51,6 +51,10 @@ command *parse_command(const char *input) {
     size_t token_count = 0;
     char **tokens = tokenize(input, &token_count);
 
+    if (tokens == NULL) {
+        return NULL;
+    }
+
     if (token_count == 0) {
         free_tokens(tokens, token_count);
         return NULL;

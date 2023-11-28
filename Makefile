@@ -19,7 +19,7 @@ SRCDIR = src
 BUILTINDIR = $(SRCDIR)/builtins
 UTILSDIR = $(SRCDIR)/utils
 PARSERDIR = $(SRCDIR)/parser
-
+RUNDIR = $(SRCDIR)/run
 TESTDIR = tests
 BUILTINTESTDIR = $(TESTDIR)/builtins
 UTILSTESTDIR = $(TESTDIR)/utils
@@ -29,7 +29,7 @@ OBJDIR = obj
 BINDIR = bin
 
 # Source, object, and test files
-SOURCES = $(wildcard $(SRCDIR)/*.c) $(wildcard $(BUILTINDIR)/*.c) $(wildcard $(UTILSDIR)/*.c) $(wildcard $(PARSERDIR)/*.c)
+SOURCES = $(wildcard $(SRCDIR)/*.c) $(wildcard $(BUILTINDIR)/*.c) $(wildcard $(UTILSDIR)/*.c) $(wildcard $(PARSERDIR)/*.c) $(wildcard $(RUNDIR)/*.c)
 APP_SOURCES = $(filter-out $(SRCDIR)/main.c, $(SOURCES))
 APP_OBJECTS = $(patsubst $(SRCDIR)/%.c,$(OBJDIR)/%.o,$(APP_SOURCES))
 TEST_SOURCES = $(wildcard $(TESTDIR)/*.c) $(wildcard $(BUILTINTESTDIR)/*.c) $(wildcard $(UTILSTESTDIR)/*.c) $(wildcard $(PARSERTESTDIR)/*.c)

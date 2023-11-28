@@ -1,3 +1,4 @@
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/wait.h>
@@ -9,15 +10,22 @@
 #include "extern_command.h"
 
 int extern_command(const command *cmd) {
-    int res;    // result of extern command
     int status; // status of the created process
     pid_t pid = fork();
 
     switch (pid) {
     case 0:
-        res = execvp(cmd->name, cmd->argv);
-        perror(cmd->name);
-        exit(res);
+        if (execvp(cmd->name, cmd->argv) == -1) {
+            if (errno == ENOENT) {
+                fprintf(stderr, "command not found: %s\n", cmd->name);
+                exit(COMMAND_NOT_FOUND);
+            } else {
+                fprintf(stderr, "error: %s\n", strerror(errno));
+                exit(FATAL_ERROR);
+            }
+        }
+
+        exit(SUCCESS);
         break;
     case -1:
         print_error("Error during process creation.");
