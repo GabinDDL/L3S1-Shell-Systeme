@@ -26,7 +26,7 @@ int update_prompt() {
     int job_number_len = get_nb_of_digits(job_number);
     size_t prompt_max_len = PROMPT_MAX_VISIBLE_LEN + nb_color_codes_char;
     size_t full_prompt_len = strlen(current_folder) + job_number_len + LITTERAL_CHARS_COUNT + nb_color_codes_char;
-    size_t final_prompt_len = full_prompt_len > prompt_max_len ? prompt_max_len : full_prompt_len;
+    size_t final_prompt_len = (full_prompt_len > prompt_max_len ? prompt_max_len : full_prompt_len) + 1;
 
     // Allocating memory for the prompt
     if (prompt != NULL) {
@@ -43,12 +43,13 @@ int update_prompt() {
         // Handling the case where the length of the path makes the prompt longer than the max length
         size_t shortened_path_len =
             prompt_max_len - LITTERAL_CHARS_COUNT - job_number_len - nb_color_codes_char - 3; // -3 for the three dots
-        size_t start_of_path = strlen(current_folder) - shortened_path_len + 1;
-        sprintf(prompt, "%s[%d]%s...%s%s$ ", YELLOW_COLOR, job_number, GREEN_COLOR, current_folder + start_of_path,
-                DEFAULT_COLOR);
+        size_t start_of_path = strlen(current_folder) - shortened_path_len;
+        snprintf(prompt, final_prompt_len + 1, "%s[%d]%s...%s%s$ ", YELLOW_COLOR, job_number, GREEN_COLOR,
+                 current_folder + start_of_path, DEFAULT_COLOR);
     } else {
         // Regular case
-        sprintf(prompt, "%s[%d]%s%s%s$ ", YELLOW_COLOR, job_number, GREEN_COLOR, current_folder, DEFAULT_COLOR);
+        snprintf(prompt, final_prompt_len + 1, "%s[%d]%s%s%s$ ", YELLOW_COLOR, job_number, GREEN_COLOR, current_folder,
+                 DEFAULT_COLOR);
     }
 
     return SUCCESS;
