@@ -14,11 +14,10 @@ int main() {
     }
 
     rl_outstream = stderr;
-    char *line = readline(prompt);
-    add_history(line);
+    last_line_read = readline(prompt);
+    add_history(last_line_read);
 
-    printf("%s\n", line);
-    free(line);
+    printf("%s\n", last_line_read);
 
     free_core();
     return 0;

@@ -1,6 +1,9 @@
 #include <assert.h>
+#include <ctype.h>
+#include <errno.h>
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -39,4 +42,13 @@ char *concat_with_delimiter(const char *str1, const char *str2, char delimiter) 
     result[len_str1 + len_str2 + 1] = '\0';
 
     return result;
+}
+
+bool is_integer(const char *str) {
+    for (size_t i = 0; i < strlen(str); ++i) {
+        if (!isdigit(*(str + i))) {
+            return false;
+        }
+    }
+    return true;
 }

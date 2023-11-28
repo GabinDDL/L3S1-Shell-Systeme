@@ -14,6 +14,7 @@ char *prompt;
 int job_number = 0;
 int last_command_exit_value = 0;
 char *last_reference_position;
+char *last_line_read;
 
 void print_error(const char *error) {
     fprintf(stderr, "%s\n", error);
@@ -94,6 +95,9 @@ int free_core() {
     }
     if (prompt != NULL) {
         free(prompt);
+    }
+    if (last_line_read != NULL) {
+        free(last_line_read);
     }
     return SUCCESS;
 }
