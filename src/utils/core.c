@@ -60,11 +60,6 @@ int init_core() {
         return FATAL_ERROR;
     }
 
-    if (update_pwd(HOME) != SUCCESS) {
-        print_error("Cannot access to $HOME.");
-        return FATAL_ERROR;
-    }
-
     if (update_current_folder()) {
         print_error("Cannot access to $PWD.");
         return FATAL_ERROR;

@@ -6,10 +6,12 @@ WORKDIR /workspace
 
 # Install necessary packages
 RUN apt-get update && apt-get install -y \
+    git \
     gcc \
     make \
     valgrind \
     clang-format \
+    libreadline-dev \
     # Add any other dependencies your project may need
     && rm -rf /var/lib/apt/lists/*
 
