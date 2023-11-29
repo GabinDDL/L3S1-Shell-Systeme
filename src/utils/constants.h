@@ -6,7 +6,6 @@
 /* ENVIRONMENT VARIABLES */
 
 extern const char *HOME;
-extern const char *PATH;
 
 /* COLORS */
 

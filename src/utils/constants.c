@@ -12,7 +12,6 @@ const char *CYAN_COLOR = "\001\033[36m\002";
 const char *RED_COLOR = "\001\033[91m\002";
 
 const char *HOME;
-const char *PATH;
 
 const int SUCCESS = 0;
 const int COMMAND_FAILURE = 1;
@@ -27,12 +26,6 @@ int init_const() {
 
     if (HOME == NULL) {
         print_error("Cannot access environment variable $HOME.");
-        return FATAL_ERROR;
-    }
-    PATH = getenv("PATH");
-
-    if (PATH == NULL) {
-        print_error("Cannot access environment variable $PATH.");
         return FATAL_ERROR;
     }
     return SUCCESS;
