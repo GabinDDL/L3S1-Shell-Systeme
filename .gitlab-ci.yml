@@ -5,10 +5,12 @@ stages:
   - build
   - test
   - check-format
+  - jalon1
 
 before_script:
   - apt-get update
-  - apt-get install -y gcc make valgrind clang-format libreadline-dev
+  - apt-get install -y git gcc make valgrind clang-format libreadline-dev
+  - git --version
   - gcc --version
   - make --version
   - valgrind --version
@@ -48,6 +50,14 @@ check_format_job:
   stage: check-format
   script:
     - make check-format
+  only:
+    - branches
+    - merge_requests
+  
+test_jalon_1:
+  stage: jalon1
+  script:
+    - ./Projet_test.sh
   only:
     - branches
     - merge_requests
