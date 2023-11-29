@@ -91,8 +91,17 @@ void test_parse_command_with_empty_input() {
     // Call the function to test
     command *cmd = parse_command(input);
 
-    // Check if the command is NULL (invalid input)
-    assert(cmd == NULL);
+    // Check if the command name is NULL
+    assert(cmd->name == NULL);
+
+    // Check the correct number of arguments
+    assert(cmd->argc == 0);
+
+    // Check if the arguments are NULL
+    assert(cmd->argv == NULL);
+
+    // Clean up
+    free_command(cmd);
 }
 
 void test_parse_command_with_only_spaces() {
@@ -101,8 +110,17 @@ void test_parse_command_with_only_spaces() {
     // Call the function to test
     command *cmd = parse_command(input);
 
-    // Check if the command is NULL (invalid input)
-    assert(cmd == NULL);
+    // Check if the command name is NULL
+    assert(cmd->name == NULL);
+
+    // Check the correct number of arguments
+    assert(cmd->argc == 0);
+
+    // Check if the arguments are NULL
+    assert(cmd->argv == NULL);
+
+    // Clean up
+    free_command(cmd);
 }
 
 void test_parse_command_with_spaces_between() {

@@ -55,16 +55,23 @@ command *parse_command(const char *input) {
         return NULL;
     }
 
-    if (token_count == 0) {
-        free_tokens(tokens, token_count);
-        return NULL;
-    }
-
     command *cmd = malloc(sizeof(command));
 
     if (cmd == NULL) {
         free_tokens(tokens, token_count);
         return NULL;
+    }
+
+    if (token_count == 0) { // Spaces only
+        cmd->name = NULL;
+        cmd->argc = 0;
+        cmd->argv = NULL;
+        cmd->redirection_count = 0;
+        cmd->redirections = NULL;
+
+        free_tokens(tokens, token_count);
+
+        return cmd;
     }
 
     cmd->name = strdup(tokens[0]);
@@ -98,18 +105,23 @@ void free_command(command *cmd) {
         return;
     }
 
-    free(cmd->name);
+    if (cmd->name != NULL)
+        free(cmd->name);
 
     size_t i = 0;
-    for (i = 0; i <= cmd->argc; ++i) {
+    for (i = 0; i < cmd->argc; ++i) {
         free(cmd->argv[i]);
     }
-    free(cmd->argv);
+
+    if (cmd->argv != NULL)
+        free(cmd->argv);
 
     for (i = 0; i < cmd->redirection_count; ++i) {
         free(cmd->redirections[i].filename);
     }
-    free(cmd->redirections);
+
+    if (cmd->redirections != NULL)
+        free(cmd->redirections);
 
     free(cmd);
 }

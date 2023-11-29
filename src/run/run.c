@@ -2,7 +2,9 @@
 
 int run_command(const command *cmd) {
 
-    if (strcmp(cmd->argv[0], "pwd") == 0) {
+    if (cmd->name == NULL) {
+        return last_command_exit_value;
+    } else if (strcmp(cmd->argv[0], "pwd") == 0) {
         return pwd(cmd);
     } else if (strcmp(cmd->argv[0], "cd") == 0) {
         int cd_output = cd(cmd);
@@ -15,6 +17,4 @@ int run_command(const command *cmd) {
     } else {
         return extern_command(cmd);
     }
-
-    return SUCCESS;
 }

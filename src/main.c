@@ -27,7 +27,8 @@ int main() {
 
         if (cmd == NULL) {
             free(line);
-            continue;
+            free_core();
+            return EXIT_FAILURE;
         }
 
         int run_output = run_command(cmd);
