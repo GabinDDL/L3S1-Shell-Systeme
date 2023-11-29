@@ -18,10 +18,10 @@ void print_error(const char *);
 // print the error message on error output
 
 int update_prompt();
-//update the prompt according to  the current position
+//update the prompt according to the current position
 
 int init_core();
-// initialize constants and then initialize the variables that need them: pwd, prompt and last_reference_position
+// initialize constants and then initialize the variables that need them: current_folder, prompt and last_reference_position
 
 int free_core();
 /* free memory allocation for variables pwd, prompt and last_reference_position other than NULL if different from value
@@ -32,6 +32,6 @@ int update_pwd(const char *);
  */
 
 int update_current_folder();
-/* Changes the folder variable to the reference of the current directory */
+/* Changes the folder variable current_folder to the reference of the current directory */
 
 #endif

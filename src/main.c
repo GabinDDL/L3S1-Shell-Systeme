@@ -10,7 +10,7 @@
 #include "utils/core.h"
 
 int main() {
-    if (init_core() == FATAL_ERROR) {
+    if (init_core() == FATAL_ERROR || init_const() == FATAL_ERROR) {
         free_core();
         exit(EXIT_FAILURE);
     }

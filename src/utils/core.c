@@ -1,11 +1,11 @@
 #include <math.h>
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
-#include "constants.h"
 #include "core.h"
 #include "int_utils.h"
 
@@ -56,11 +56,6 @@ int update_prompt() {
 }
 
 int init_core() {
-    if (init_const() == FATAL_ERROR) {
-        print_error("Cannot allocate a memory zone");
-        return FATAL_ERROR;
-    }
-
     if (update_current_folder()) {
         print_error("Cannot access to $PWD.");
         return FATAL_ERROR;
@@ -71,14 +66,14 @@ int init_core() {
         return FATAL_ERROR;
     }
 
-    size_t len_home = strlen(HOME);
-    last_reference_position = malloc((len_home + 1) * sizeof(char));
+    size_t len_current_folder = strlen(current_folder);
+    last_reference_position = malloc((len_current_folder + 1) * sizeof(char));
 
     if (last_reference_position == NULL) {
         print_error("Cannot allocate a memory zone.");
         return FATAL_ERROR;
     }
-    memmove(last_reference_position, HOME, len_home + 1);
+    memmove(last_reference_position, current_folder, len_current_folder + 1);
 
     return SUCCESS;
 }
