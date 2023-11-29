@@ -17,16 +17,15 @@ int main() {
 
     rl_outstream = stderr;
     while (1) {
-        char *line = readline(prompt);
-        if (line == NULL) {
+        last_line_read = readline(prompt);
+        if (last_line_read == NULL) {
             break;
         }
-        add_history(line);
+        add_history(last_line_read);
 
-        command *cmd = parse_command(line);
+        command *cmd = parse_command(last_line_read);
 
         if (cmd == NULL) {
-            free(line);
             free_core();
             return EXIT_FAILURE;
         }
@@ -34,7 +33,6 @@ int main() {
         int run_output = run_command(cmd);
 
         if (run_output == FATAL_ERROR) {
-            free(line);
             free_command(cmd);
             free_core();
             return EXIT_FAILURE;
@@ -42,7 +40,7 @@ int main() {
 
         last_command_exit_value = run_output;
 
-        free(line);
+        free(last_line_read);
         free_command(cmd);
     }
 
