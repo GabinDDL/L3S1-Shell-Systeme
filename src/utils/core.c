@@ -15,6 +15,7 @@ int job_number = 0;
 int last_command_exit_value = 0;
 char *last_reference_position;
 char *last_line_read;
+job **jobs = NULL;
 
 void print_error(const char *error) {
     fprintf(stderr, "%s\n", error);
@@ -113,5 +114,78 @@ int update_current_folder() {
     }
     last_reference_position = current_folder;
     current_folder = new_current_folder;
+    return SUCCESS;
+}
+
+int add_job_to_jobs(job *j) {
+    if (jobs == NULL) {
+        jobs = malloc(sizeof(job *));
+
+        if (jobs == NULL) {
+            print_error("Cannot allocate a memory zone.");
+            return FATAL_ERROR;
+        }
+        jobs[0] = j;
+        job_number++;
+        return SUCCESS;
+    }
+    job **temp = malloc(sizeof(job *) * (job_number + 1));
+
+    if (temp == NULL) {
+        print_error("Cannot allocate a memory zone.");
+        return FATAL_ERROR;
+    }
+    memmove(temp, jobs, job_number * sizeof(job *));
+    temp[job_number] = j;
+
+    free(jobs);
+    jobs = temp;
+
+    job_number++;
+
+    return SUCCESS;
+}
+
+int get_jobs_placement_with_id(unsigned id) {
+    job *acc;
+    for (int i = 0; i < job_number; i++) {
+        acc = jobs[i];
+        if (acc != NULL && acc->id == id) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+int remove_job_from_jobs(unsigned id) {
+    if (jobs == NULL) {
+        return COMMAND_FAILURE;
+    }
+    int job_placement = get_jobs_placement_with_id(id);
+
+    if (job_placement < 0) {
+        return COMMAND_FAILURE;
+    }
+    job **temp = malloc(sizeof(job *) * (job_number - 1));
+
+    if (temp == NULL) {
+        print_error("Cannot allocate a memory zone.");
+        return FATAL_ERROR;
+    }
+
+    memmove(temp, jobs, job_placement * sizeof(char *));
+    memmove(temp + job_placement, jobs + job_placement + 1, (job_number - job_placement - 1) * sizeof(char *));
+
+    job *j_removed = jobs[job_placement];
+    free(j_removed);
+
+    free(jobs);
+    jobs = temp;
+    job_number--;
+
+    if (job_number == 0) {
+        free(jobs);
+        jobs = NULL;
+    }
     return SUCCESS;
 }
