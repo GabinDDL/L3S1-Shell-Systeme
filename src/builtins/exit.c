@@ -27,7 +27,6 @@ int exit_jsh(const command *cmd) {
             return COMMAND_FAILURE;
         }
     }
-    free_command((command *)cmd);
     free_core();
     exit(exit_value);
 }

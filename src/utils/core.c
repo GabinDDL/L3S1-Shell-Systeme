@@ -15,6 +15,7 @@ int job_number = 0;
 int last_command_exit_value = 0;
 char *last_reference_position;
 char *last_line_read;
+pipeline_list *current_pipeline_list = NULL;
 job **jobs = NULL;
 
 void print_error(const char *error) {
@@ -79,6 +80,16 @@ int init_core() {
     return SUCCESS;
 }
 
+void free_job(job *j) {
+    if (j == NULL) {
+        return;
+    }
+    if (j->pipeline != NULL) {
+        free(j->pipeline);
+    }
+    free(j);
+}
+
 int free_core() {
     if (current_folder != NULL) {
         free(current_folder);
@@ -92,6 +103,13 @@ int free_core() {
     if (last_line_read != NULL) {
         free(last_line_read);
     }
+    if (jobs != NULL) {
+        for (size_t i; i < job_number; i++) {
+            free_job(jobs[i]);
+        }
+        free(jobs);
+    }
+    free_pipeline_list(current_pipeline_list);
     return SUCCESS;
 }
 
@@ -177,7 +195,7 @@ int remove_job_from_jobs(unsigned id) {
     memmove(temp + job_placement, jobs + job_placement + 1, (job_number - job_placement - 1) * sizeof(char *));
 
     job *j_removed = jobs[job_placement];
-    free(j_removed);
+    free_job(j_removed);
 
     free(jobs);
     jobs = temp;

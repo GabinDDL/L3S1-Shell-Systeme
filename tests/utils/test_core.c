@@ -70,6 +70,7 @@ void test_remove_job_from_jobs() {
     assert(remove_job_from_jobs(0) == COMMAND_FAILURE);
     job *j1 = malloc(sizeof(job));
     j1->id = 0;
+    j1->pipeline = NULL;
     add_job_to_jobs(j1);
 
     assert(remove_job_from_jobs(0) == SUCCESS);
@@ -78,13 +79,17 @@ void test_remove_job_from_jobs() {
 
     job *j2 = malloc(sizeof(job));
     j2->id = 1;
+    j2->pipeline = NULL;
     job *j3 = malloc(sizeof(job));
     j3->id = 2;
+    j3->pipeline = NULL;
     job *j4 = malloc(sizeof(job));
     j4->id = 3;
+    j4->pipeline = NULL;
 
     j1 = malloc(sizeof(job));
     j1->id = 0;
+    j1->pipeline = NULL;
     add_job_to_jobs(j1);
     add_job_to_jobs(j2);
     add_job_to_jobs(j3);

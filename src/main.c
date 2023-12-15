@@ -23,17 +23,18 @@ int main() {
         }
         add_history(last_line_read);
 
-        command *cmd = parse_command(last_line_read);
+        current_pipeline_list = parse_pipeline_list(last_line_read);
 
-        if (cmd == NULL) {
-            free_core();
-            return EXIT_FAILURE;
+        if (current_pipeline_list == NULL) {
+            print_error("jsh: parse error");
+            last_command_exit_value = COMMAND_FAILURE;
+            continue;
         }
 
-        int run_output = run_command(cmd);
+        int run_output = run_pipeline_list(current_pipeline_list);
 
         if (run_output == FATAL_ERROR) {
-            free_command(cmd);
+            free_pipeline_list(current_pipeline_list);
             free_core();
             return EXIT_FAILURE;
         }
@@ -41,7 +42,8 @@ int main() {
         last_command_exit_value = run_output;
 
         free(last_line_read);
-        free_command(cmd);
+        free_pipeline_list_without_jobs(current_pipeline_list);
+        current_pipeline_list = NULL;
     }
 
     free_core();

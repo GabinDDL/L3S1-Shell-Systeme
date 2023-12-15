@@ -3,6 +3,7 @@
 #include <errno.h>
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -23,6 +24,38 @@ bool start_with(const char *str, const char *prefix) {
         if (str[i] != prefix[i]) {
             return false;
         }
+    }
+    return true;
+}
+
+bool start_with_exception(const char *str, const char *prefix, char c) {
+    if (str == NULL || prefix == NULL) {
+        return false;
+    }
+    size_t len_str = strlen(str);
+    size_t len_prefix = strlen(prefix);
+
+    if (len_prefix > len_str) {
+        return false;
+    }
+    size_t i = 0;
+
+    while (i < len_str) {
+        if (str[i] != c) {
+            break;
+        }
+        i++;
+    }
+
+    if (len_prefix > len_str - i) {
+        return false;
+    }
+
+    for (size_t j = 0; j < len_prefix; j++) {
+        if (str[i] != prefix[j]) {
+            return false;
+        }
+        i++;
     }
     return true;
 }
@@ -55,4 +88,19 @@ bool is_integer(const char *str) {
         }
     }
     return true;
+}
+
+bool has_sequence_of(const char *str, char c) {
+    size_t str_len = strlen(str);
+
+    if (str_len == 0) {
+        return false;
+    }
+
+    for (size_t i = 0; i < str_len - 1; i++) {
+        if (str[i] == c && str[i + 1] == c) {
+            return true;
+        }
+    }
+    return false;
 }

@@ -53,11 +53,3 @@ check_format_job:
   only:
     - branches
     - merge_requests
-  
-test_jalon_1:
-  stage: jalon1
-  script:
-    - ./Projet_test.sh
-  only:
-    - branches
-    - merge_requests

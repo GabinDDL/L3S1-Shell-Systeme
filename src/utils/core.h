@@ -29,9 +29,10 @@ typedef struct job {
 extern char *current_folder; // current user position, initialized with PWD from constant
 extern char *prompt;         // command readout prompt
 extern int job_number;
-extern int last_command_exit_value;   // last user command exit value
-extern char *last_reference_position; // last user location, initialized with PWD from constant
-extern char *last_line_read;          // last line typed by the user
+extern int last_command_exit_value;     // last user command exit value
+extern char *last_reference_position;   // last user location, initialized with PWD from constant
+extern char *last_line_read;            // last line typed by the user
+extern pipeline_list *current_pipeline_list; // current_pipeline run
 extern job **jobs;
 
 /* FUNCTIONS */

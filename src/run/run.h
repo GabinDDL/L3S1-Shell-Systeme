@@ -23,4 +23,32 @@ int run_command(const command *cmd);
  *  - Exit value from extern_command if the command was an external command.
  */
 
+int run_pipeline(const pipeline *pip);
+/* Run a pipeline.
+ * 
+ * Parameters:
+ *  - pipeline: The pipeline to run.
+ * 
+ * Returns:
+ *  - SUCCESS if the pipeline was run successfully.
+ *  - FATAL_ERROR if there was a fatal error.
+ *  - COMMAND_FAILURE if the pipeline failed.
+ *  - COMMAND_NOT_FOUND if the pipeline was not found.
+ *  - Exit value from extern_command if the pipeline was an external command.
+ */
+
+int run_pipeline_list(const pipeline_list *pips);
+/* Run a list of pipelines.
+ * 
+ * Parameters:
+ *  - pipeline_list: The pipeline_list to run.
+ * 
+ * Returns:
+ *  - SUCCESS if the pipeline_list was run successfully.
+ *  - FATAL_ERROR if there was a fatal error.
+ *  - COMMAND_FAILURE if the last pipeline of pipeline_list failed.
+ *  - COMMAND_NOT_FOUND if the last pipeline of pipeline_list was not found.
+ *  - Exit value from extern_command if the last pipeline of pipeline_list was an external command.
+ */
+
 #endif  // RUN_H

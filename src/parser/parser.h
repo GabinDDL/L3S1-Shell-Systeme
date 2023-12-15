@@ -1,13 +1,17 @@
 #ifndef PARSER_H
 #define PARSER_H
 
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #define MAX_TOKENS 256
-#define TOKEN_DELIM " "
+#define TOKEN_COMMAND_DELIM " "
+#define TOKEN_PIPELINE_DELIM "&"
+#define TOKEN_COMMAND_DELIM_C ' '
+#define TOKEN_PIPELINE_DELIM_C '&'
 
 typedef enum {
     REDIRECT_STDIN,
@@ -45,55 +49,72 @@ typedef struct {
     redirection *redirections;
 } command;
 /*
-    * A command is a list of arguments and redirections.
-    * For example, the command "ls -l > output.txt" would be parsed as:
-    *  - name: "ls"
-    *  - argc: 2
-    *  - argv: ["ls", "-l", NULL]
-    *  - redirection_count: 1
-    *  - redirections: [
-    *      {
-    *          type: REDIRECT_STDOUT,
-    *          mode: REDIRECT_OVERWRITE,
-    *          filename: "output.txt"
-    *      }
-    *  ]
-*/
+ * A command is a list of arguments and redirections.
+ * For example, the command "ls -l > output.txt" would be parsed as:
+ *  - name: "ls"
+ *  - argc: 2
+ *  - argv: ["ls", "-l", NULL]
+ *  - redirection_count: 1
+ *  - redirections: [
+ *      {
+ *          type: REDIRECT_STDOUT,
+ *          mode: REDIRECT_OVERWRITE,
+ *          filename: "output.txt"
+ *      }
+ *  ]
+ */
 
 typedef struct {
     size_t command_count;
-    command *commands;
+    command **commands;
+    bool to_job;
 } pipeline;
-/*
-    * A pipeline is a list of commands.
-    * For example, the command "ls -l | grep foo" would be parsed as:
-    *  - command_count: 2
-    *  - commands: [
-    *      {
-    *          name: "ls",
-    *          argc: 2,
-    *          argv: ["ls", "-l", NULL],
-    *          redirection_count: 0,
-    *          redirections: []
-    *      },
-    *      {
-    *          name: "grep",
-    *          argc: 2,
-    *          argv: ["grep", "foo", NULL],
-    *          redirection_count: 0,
-    *          redirections: []
-    *      }
-    *  ]
-*/
+/* A pipeline is a list of commands with a variable to determine whether
+ * it should become a job. */
+
+typedef struct {
+    size_t pipeline_count;
+    pipeline **pipelines;
+} pipeline_list;
+/* pipelines is a list of pipeline */
 
 command *parse_command(const char *input);
-/* parse_command takes a string and parses it into a command struct. 
+/* parse_command takes a string and parses it into a command struct.
  * The string is expected to be a single command, with no pipes.
  * The command struct is allocated on the heap, so it must be freed with free_command.
  * If the string is invalid, parse_command returns NULL.
-*/
+ */
+
+pipeline *parse_pipeline(const char *input, bool to_job);
+/* parse_pipeline takes a string and a boolean and parses both into a pipeline struct.
+ * The boolean to_job is whether the pipeline should create a new job to execute the command or not.
+ * The string is expected to be a single command, with no pipes.
+ * The pipeline struct is allocated on the heap, so it must be freed with free_pipeline.
+ * If the string is invalid, parse_pipeline returns NULL.
+ */
+
+
+pipeline_list *parse_pipeline_list(const char *input);
+/* parse_pipeline_list takes a string and parses it into a pipeline_list struct.
+ * The string is expected to be few command, with no pipes, delimited by &.
+ * The pipeline_list struct is allocated on the heap, so it must be freed with free_pipeline_list.
+ * If the string is invalid, parse_pipeline_list returns NULL.
+ */
 
 void free_command(command *cmd);
-// free_command frees the memory allocated by parse_command, the command struct and its fields.
+/* free_command frees the memory allocated by parse_command,
+ * the command struct and its fields.*/
+
+void free_pipeline(pipeline *pip);
+/* free_pipeline frees the memory allocated by parse_pipeline,
+ * the pipeline struct and its fields.*/
+
+void free_pipeline_list(pipeline_list *pips);
+/* free_pipeline_list frees the memory allocated by parse_pipeline_list,
+ * the pipelines, pipelines struct, and their fields */
+
+void free_pipeline_list_without_jobs(pipeline_list *pips);
+/* free_pipeline_list_without_jobs frees the memory allocated by parse_pipeline_list,
+ * the pipelines, pipelines struct with to_job false, and their commands */
 
 #endif
