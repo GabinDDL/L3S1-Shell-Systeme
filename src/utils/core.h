@@ -40,30 +40,29 @@ extern job **jobs;
 void print_error(const char *);
 // print the error message on error output
 
-int update_prompt();
+void update_prompt();
 // update the prompt according to the current position
 
-int init_core();
+void init_core();
 // initialize constants and then initialize the variables that need them: current_folder, prompt and
 // last_reference_position
 
-int free_core();
+void free_core();
 /* free memory allocation for variables pwd, prompt and last_reference_position other than NULL if different from value
 NULL */
 
-int update_pwd(const char *);
+int change_pwd(const char *);
 /* updates the pwd environment variable by changing it to the string passed as argument, and returns an error otherwise
  */
 
-int update_current_folder();
+void update_current_folder();
 /* Changes the folder variable current_folder to the reference of the current directory */
 
 int add_job_to_jobs(job *);
-/* Adds a new job to the job list, and returns SUCESS if the command succeeds and FATAL_ERROR if there is an allocation
- * problem */
+/* Adds a new job to the job list, and returns SUCESS if the command succeeds */
 
 int remove_job_from_jobs(unsigned);
 /* Removes the job with the given id from the list, and returns SUCESS if the command succeeds,
- * COMMAND_FAILURE if the job is not found, and FATAL_ERROR if there is an allocation problem */
+ * COMMAND_FAILURE if the job is not found */
 
 #endif

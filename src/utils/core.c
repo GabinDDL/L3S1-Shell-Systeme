@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <math.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -22,7 +23,7 @@ void print_error(const char *error) {
     fprintf(stderr, "%s\n", error);
 }
 
-int update_prompt() {
+void update_prompt() {
     // Defining the size of the prompt
     size_t nb_color_codes_char = strlen(DEFAULT_COLOR) + strlen(YELLOW_COLOR) + strlen(GREEN_COLOR);
     int job_number_len = get_nb_of_digits(job_number);
@@ -35,10 +36,7 @@ int update_prompt() {
         free(prompt);
     }
     prompt = malloc((final_prompt_len + 1) * sizeof(char));
-    if (prompt == NULL) {
-        print_error("Cannot allocate a memory zone.");
-        return FATAL_ERROR;
-    }
+    assert(prompt != NULL);
 
     // Constructing the prompt
     if (full_prompt_len > prompt_max_len) {
@@ -53,31 +51,17 @@ int update_prompt() {
         snprintf(prompt, final_prompt_len + 1, "%s[%d]%s%s%s$ ", YELLOW_COLOR, job_number, GREEN_COLOR, current_folder,
                  DEFAULT_COLOR);
     }
-
-    return SUCCESS;
 }
 
-int init_core() {
-    if (update_current_folder()) {
-        print_error("Cannot access to $PWD.");
-        return FATAL_ERROR;
-    }
-
-    if (update_prompt() != 0) {
-        print_error("Cannot generate prompt");
-        return FATAL_ERROR;
-    }
+void init_core() {
+    update_current_folder();
+    update_prompt();
 
     size_t len_current_folder = strlen(current_folder);
     last_reference_position = malloc((len_current_folder + 1) * sizeof(char));
 
-    if (last_reference_position == NULL) {
-        print_error("Cannot allocate a memory zone.");
-        return FATAL_ERROR;
-    }
+    assert(last_reference_position != NULL);
     memmove(last_reference_position, current_folder, len_current_folder + 1);
-
-    return SUCCESS;
 }
 
 void free_job(job *j) {
@@ -90,7 +74,7 @@ void free_job(job *j) {
     free(j);
 }
 
-int free_core() {
+void free_core() {
     if (current_folder != NULL) {
         free(current_folder);
     }
@@ -110,49 +94,39 @@ int free_core() {
         free(jobs);
     }
     free_pipeline_list(current_pipeline_list);
-    return SUCCESS;
 }
 
-int update_pwd(const char *path) {
+int change_pwd(const char *path) {
     if (chdir(path) != 0) {
         return COMMAND_FAILURE;
     }
     return SUCCESS;
 }
 
-int update_current_folder() {
+void update_current_folder() {
     char *new_current_folder = getcwd(NULL, 0);
+    assert(new_current_folder != NULL);
 
-    if (new_current_folder == NULL) {
-        print_error("Cannot allocate a memory zone.");
-        return FATAL_ERROR;
-    }
     if (last_reference_position != NULL) {
         free(last_reference_position);
     }
+
     last_reference_position = current_folder;
     current_folder = new_current_folder;
-    return SUCCESS;
 }
 
 int add_job_to_jobs(job *j) {
     if (jobs == NULL) {
         jobs = malloc(sizeof(job *));
 
-        if (jobs == NULL) {
-            print_error("Cannot allocate a memory zone.");
-            return FATAL_ERROR;
-        }
+        assert(jobs != NULL);
         jobs[0] = j;
         job_number++;
         return SUCCESS;
     }
     job **temp = malloc(sizeof(job *) * (job_number + 1));
+    assert(temp != NULL);
 
-    if (temp == NULL) {
-        print_error("Cannot allocate a memory zone.");
-        return FATAL_ERROR;
-    }
     memmove(temp, jobs, job_number * sizeof(job *));
     temp[job_number] = j;
 
@@ -186,10 +160,7 @@ int remove_job_from_jobs(unsigned id) {
     }
     job **temp = malloc(sizeof(job *) * (job_number - 1));
 
-    if (temp == NULL) {
-        print_error("Cannot allocate a memory zone.");
-        return FATAL_ERROR;
-    }
+    assert(temp != NULL);
 
     memmove(temp, jobs, job_placement * sizeof(char *));
     memmove(temp + job_placement, jobs + job_placement + 1, (job_number - job_placement - 1) * sizeof(char *));

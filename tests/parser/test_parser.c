@@ -19,6 +19,7 @@ void test_parse_pipeline_list_with_start_ampersand();
 void test_parse_pipeline_list_with_middle_ampersands();
 void test_parse_pipeline_list_with_only_ampersand();
 void test_parse_pipeline_list_with_middle_ampersands_and_spaces();
+void test_parse_pipeline_list_with_middle_ampersands_and_spaces2();
 void test_parse_pipeline_list_with_single_pipeline_no_job();
 void test_parse_pipeline_list_with_single_pipeline_with_job();
 void test_parse_pipeline_list_with_correct_pipelines();
@@ -82,6 +83,10 @@ void test_parser_utils() {
     printf("Test function test_parse_pipeline_list_with_middle_ampersands_and_spaces\n");
     test_parse_pipeline_list_with_middle_ampersands_and_spaces();
     printf("Test test_parse_pipeline_list_with_middle_ampersands_and_spaces passed\n");
+
+    printf("Test function test_parse_pipeline_list_with_middle_ampersands_and_spaces2\n");
+    test_parse_pipeline_list_with_middle_ampersands_and_spaces2();
+    printf("Test test_parse_pipeline_list_with_middle_ampersands_and_spaces2 passed\n");
 
     printf("Test function test_parse_pipeline_list_with_single_pipeline_with_job\n");
     test_parse_pipeline_list_with_single_pipeline_with_job();
@@ -295,8 +300,11 @@ void test_parse_pipeline_list_with_only_spaces() {
     assert(pips->pipeline_count == 1);
 
     // Check if the pipeline are NULL
-    assert(pips->pipelines[0] == NULL);
+    assert(pips->pipelines[0] != NULL);
 
+    assert(pips->pipelines[0]->command_count == 1);
+
+    assert(pips->pipelines[0]->commands[0]->name == NULL);
     // Clean up
     free_pipeline_list(pips);
 }
@@ -343,6 +351,17 @@ void test_parse_pipeline_list_with_middle_ampersands() {
 
 void test_parse_pipeline_list_with_middle_ampersands_and_spaces() {
     char *input = "ls &    & ./test";
+
+    // Call the function to test
+    pipeline_list *pips = parse_pipeline_list(input);
+
+    // Check if the pipeline_list is NULL
+    assert(pips == NULL);
+}
+
+
+void test_parse_pipeline_list_with_middle_ampersands_and_spaces2() {
+    char *input = "ls &    &";
 
     // Call the function to test
     pipeline_list *pips = parse_pipeline_list(input);
@@ -536,12 +555,18 @@ void test_parse_pipeline_list_with_correct_pipelines_with_spaces_and_final_amper
     pipeline *pip4 = pips->pipelines[3];
     pipeline *pip5 = pips->pipelines[4];
 
+    // Check last pipeline
+
+    assert(pip5 != NULL);
+    assert(pip5->command_count == 1);
+    assert(pip5->commands != NULL);
+    assert(pip5->commands[0]->name == NULL);
+
     // Check if the pipelines have to_job
     assert(pip1->to_job);
     assert(pip2->to_job);
     assert(pip3->to_job);
     assert(pip4->to_job);
-    assert(pip5 == NULL);
 
     // Check the correct number of command in pipelines
     assert(pip1->command_count == 1);

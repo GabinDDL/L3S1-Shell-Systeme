@@ -17,7 +17,6 @@ int run_command(const command *cmd);
  * 
  * Returns:
  *  - SUCCESS if the command was run successfully.
- *  - FATAL_ERROR if there was a fatal error.
  *  - COMMAND_FAILURE if the command failed.
  *  - COMMAND_NOT_FOUND if the command was not found.
  *  - Exit value from extern_command if the command was an external command.
@@ -31,7 +30,6 @@ int run_pipeline(const pipeline *pip);
  * 
  * Returns:
  *  - SUCCESS if the pipeline was run successfully.
- *  - FATAL_ERROR if there was a fatal error.
  *  - COMMAND_FAILURE if the pipeline failed.
  *  - COMMAND_NOT_FOUND if the pipeline was not found.
  *  - Exit value from extern_command if the pipeline was an external command.
@@ -45,7 +43,6 @@ int run_pipeline_list(const pipeline_list *pips);
  * 
  * Returns:
  *  - SUCCESS if the pipeline_list was run successfully.
- *  - FATAL_ERROR if there was a fatal error.
  *  - COMMAND_FAILURE if the last pipeline of pipeline_list failed.
  *  - COMMAND_NOT_FOUND if the last pipeline of pipeline_list was not found.
  *  - Exit value from extern_command if the last pipeline of pipeline_list was an external command.

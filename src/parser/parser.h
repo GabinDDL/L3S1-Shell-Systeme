@@ -85,14 +85,13 @@ command *parse_command(const char *input);
  * If the string is invalid, parse_command returns NULL.
  */
 
-pipeline *parse_pipeline(const char *input, bool to_job);
+pipeline *parse_pipeline(const char *input, bool to_job, bool can_be_empty);
 /* parse_pipeline takes a string and a boolean and parses both into a pipeline struct.
  * The boolean to_job is whether the pipeline should create a new job to execute the command or not.
+ * The can_be_empty boolean is used to determine whether this is the last pipeline, or whether a NULL command is accepted.
  * The string is expected to be a single command, with no pipes.
  * The pipeline struct is allocated on the heap, so it must be freed with free_pipeline.
- * If the string is invalid, parse_pipeline returns NULL.
- */
-
+ * If a command is incorrect or if it's a NULL command and not the last one, returns NULL */
 
 pipeline_list *parse_pipeline_list(const char *input);
 /* parse_pipeline_list takes a string and parses it into a pipeline_list struct.

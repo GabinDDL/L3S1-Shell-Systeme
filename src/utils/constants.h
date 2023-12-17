@@ -20,7 +20,6 @@ extern const char *RED_COLOR;
 
 extern const int SUCCESS;
 extern const int COMMAND_FAILURE;
-extern const int FATAL_ERROR;
 extern const int COMMAND_NOT_FOUND;
 
 /* PROMPT DATA*/
@@ -30,7 +29,7 @@ extern const size_t LITTERAL_CHARS_COUNT; //the number of litteral characters in
 
 /* FUNCTIONS */
 
-int init_const();
+void init_const();
 // initializes the PATH and HOME environment variables, which could be erroneous if the value of getenv is not checked
 
 #endif

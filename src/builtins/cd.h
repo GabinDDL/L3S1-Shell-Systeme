@@ -8,7 +8,6 @@ int cd(const command *);
  * if it is is valid, the previous working directory if the parameter
  * is -, or $HOME if no parameter is specified.a
  * It is possible to use ~ to reference $HOME.
- * Returns SUCCESS on success, COMMAND_FAILURE on failure,
- * and FATAL_ERROR on system failure. */
+ * Returns SUCCESS on success, COMMAND_FAILURE on failure. */
 
 #endif

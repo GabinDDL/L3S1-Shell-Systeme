@@ -10,10 +10,8 @@
 #include "utils/core.h"
 
 int main() {
-    if (init_core() == FATAL_ERROR || init_const() == FATAL_ERROR) {
-        free_core();
-        exit(EXIT_FAILURE);
-    }
+    init_core();
+    init_const();
 
     rl_outstream = stderr;
     while (1) {
@@ -32,12 +30,6 @@ int main() {
         }
 
         int run_output = run_pipeline_list(current_pipeline_list);
-
-        if (run_output == FATAL_ERROR) {
-            free_pipeline_list(current_pipeline_list);
-            free_core();
-            return EXIT_FAILURE;
-        }
 
         last_command_exit_value = run_output;
 

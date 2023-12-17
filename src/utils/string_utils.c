@@ -69,9 +69,7 @@ char *concat_with_delimiter(const char *str1, const char *str2, char delimiter) 
 
     char *result = malloc((len_str1 + len_str2 + 2) * sizeof(char));
 
-    if (result == NULL) {
-        return NULL;
-    }
+    assert(result != NULL);
 
     memmove(result, str1, len_str1);
     result[len_str1] = delimiter;

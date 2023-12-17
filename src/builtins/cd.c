@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -22,23 +23,22 @@ int cd(const command *cmd) {
 
     int res_command;
     if (cmd->argc == 1) { // No argument case
-        if ((res_command = update_pwd(HOME)) != SUCCESS) {
+        if ((res_command = change_pwd(HOME)) != SUCCESS) {
             return res_command;
         }
-        return update_current_folder();
+        update_current_folder();
+        return SUCCESS;
     }
     if (strcmp(cmd->argv[1], "-") == 0) { // Last reference case
-        if ((res_command = update_pwd(last_reference_position)) != SUCCESS) {
+        if ((res_command = change_pwd(last_reference_position)) != SUCCESS) {
             return res_command;
         }
-        return update_current_folder();
+        update_current_folder();
+        return SUCCESS;
     }
     char *correct_path = get_correct_path(cmd->argv[1]); // Corrects the path for ~
 
-    if (correct_path == NULL) {
-        return FATAL_ERROR;
-    }
-
+    assert(correct_path != NULL);
     struct stat st;
 
     if (stat(correct_path, &st) != 0) { // Checks if the directory exists
@@ -51,15 +51,12 @@ int cd(const command *cmd) {
         free(correct_path);
         return COMMAND_FAILURE;
     }
-    if ((res_command = update_pwd(correct_path)) != SUCCESS) { // Updates pwd
+    if ((res_command = change_pwd(correct_path)) != SUCCESS) { // Updates pwd
         free(correct_path);
         return res_command;
     }
 
-    if ((res_command = update_current_folder()) != SUCCESS) { // Updates current_folder var
-        free(correct_path);
-        return res_command;
-    }
+    update_current_folder(); // Updates current_folder var
 
     free(correct_path);
 
@@ -74,9 +71,7 @@ char *get_correct_path(const char *path) {
             size_t len_home = strlen(HOME);
             new_path = malloc((len_home + 1) * sizeof(char));
 
-            if (new_path == NULL) {
-                return NULL;
-            }
+            assert(new_path != NULL);
             memmove(new_path, HOME, len_home + 1);
             return new_path;
         }
@@ -84,10 +79,8 @@ char *get_correct_path(const char *path) {
     }
     size_t len_path = strlen(path);
     new_path = malloc((len_path + 1) * sizeof(char));
+    assert(new_path != NULL);
 
-    if (new_path == NULL) {
-        return NULL;
-    }
     memmove(new_path, path, len_path + 1);
     return new_path;
 }
