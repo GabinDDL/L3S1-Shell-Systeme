@@ -8,7 +8,7 @@ LIBRARY = -lncurses -lreadline -lm
 
 # Valgrind options
 VALGRIND = valgrind
-VFLAGS = --leak-check=full --show-leak-kinds=all --track-origins=yes
+VFLAGS = --leak-check=full --show-leak-kinds=all --track-origins=yes -s
 
 # Code formatting tool
 CLANG_FORMAT = clang-format
@@ -87,6 +87,9 @@ check-format:
 # Cleaning up
 clean:
 	rm -rf $(OBJDIR) $(BINDIR) $(COPY_EXECUTABLE)
+
+gdb: $(EXECUTABLE)
+	gdb $(EXECUTABLE)
 
 # Phony targets
 .PHONY: all clean test format run

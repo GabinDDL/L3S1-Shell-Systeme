@@ -3,17 +3,24 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <string.h>
+#include <sys/wait.h>
+#include <errno.h>
 
 #include "../utils/core.h"
 #include "../parser/parser.h"
 #include "../utils/constants.h"
 #include "../builtins/builtins.h"
 
+int run_command_without_redirections(const command *cmd);
+
 int run_command(const command *cmd);
 /* Run a command.
  * 
  * Parameters:
- *  - cmd: The command to run.
+ *  - cmd: The command to run with its arguments and redirections.
  * 
  * Returns:
  *  - SUCCESS if the command was run successfully.

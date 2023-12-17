@@ -14,12 +14,10 @@
 #define TOKEN_PIPELINE_DELIM_C '&'
 
 typedef enum {
-    REDIRECT_STDIN,
     REDIRECT_STDOUT,
     REDIRECT_STDERR,
 } RedirectionType;
 /* Types of redirections supported:
- *  - Redirect stdin
  *  - Redirect stdout
  *  - Redirect stderr
  */
@@ -39,30 +37,32 @@ typedef struct {
     RedirectionType type;
     RedirectionMode mode;
     char *filename;
-} redirection;
+} output_redirection;
 
 typedef struct {
     char *name;
     size_t argc;
     char **argv;
-    size_t redirection_count;
-    redirection *redirections;
+    char *input_redirection_filename;
+    size_t output_redirection_count;
+    output_redirection *output_redirections;
 } command;
 /*
- * A command is a list of arguments and redirections.
- * For example, the command "ls -l > output.txt" would be parsed as:
- *  - name: "ls"
- *  - argc: 2
- *  - argv: ["ls", "-l", NULL]
- *  - redirection_count: 1
- *  - redirections: [
- *      {
- *          type: REDIRECT_STDOUT,
- *          mode: REDIRECT_OVERWRITE,
- *          filename: "output.txt"
- *      }
- *  ]
- */
+    * A command is a single command with its arguments and redirections.
+    * For example, the command "ls -l > foo" would be parsed as:
+    *  - name: "ls"
+    *  - argc: 2
+    *  - argv: ["ls", "-l", NULL]
+    *  - input_redirection_filename: NULL
+    *  - output_redirection_count: 1
+    *  - output_redirections: [
+    *      {
+    *          type: REDIRECT_STDOUT,
+    *          mode: REDIRECT_OVERWRITE,
+    *          filename: "foo"
+    *      }
+    *  ]
+    */
 
 typedef struct {
     size_t command_count;

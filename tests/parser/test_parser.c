@@ -25,6 +25,15 @@ void test_parse_pipeline_list_with_single_pipeline_with_job();
 void test_parse_pipeline_list_with_correct_pipelines();
 void test_parse_pipeline_list_with_correct_pipelines_with_final_ampersand();
 void test_parse_pipeline_list_with_correct_pipelines_with_spaces_and_final_ampersand();
+void test_parser_command_with_redirections();
+void test_parser_command_with_various_redirections();
+void test_parser_command_with_correct_but_weird_redirections();
+void test_parser_command_with_redirections_and_misleading_arguments();
+void test_parser_command_with_redirections_ls_left_arrow();
+void test_parser_command_with_redirections_ls_right_arrow();
+void test_parser_command_with_redirections_right_arrow();
+void test_parser_command_with_redirections_left_arrow();
+void test_parser_command_with_redirections_right_arrow_ls();
 
 void test_parser_utils() {
 
@@ -107,6 +116,42 @@ void test_parser_utils() {
     printf("Test function test_parse_pipeline_list_with_correct_pipelines_with_spaces_and_final_ampersand\n");
     test_parse_pipeline_list_with_correct_pipelines_with_spaces_and_final_ampersand();
     printf("Test test_parse_pipeline_list_with_correct_pipelines_with_spaces_and_final_ampersand passed\n");
+    printf("Test function test_parser_command_with_redirections\n");
+    test_parser_command_with_redirections();
+    printf("Test test_parser_command_with_redirections passed\n");
+
+    printf("Test function test_parser_command_with_various_redirections\n");
+    test_parser_command_with_various_redirections();
+    printf("Test test_parser_command_with_various_redirections passed\n");
+
+    printf("Test function test_parser_command_with_correct_but_weird_redirections\n");
+    test_parser_command_with_correct_but_weird_redirections();
+    printf("Test test_parser_command_with_correct_but_weird_redirections passed\n");
+
+    printf("Test function test_parser_command_with_redirections_and_misleading_arguments\n");
+    test_parser_command_with_redirections_and_misleading_arguments();
+    printf("Test test_parser_command_with_redirections_and_misleading_arguments passed\n");
+
+    printf("Test function test_parser_command_with_redirections_ls_left_arrow\n");
+    test_parser_command_with_redirections_ls_left_arrow();
+    printf("Test test_parser_command_with_redirections_ls_left_arrow passed\n");
+
+    printf("Test function test_parser_command_with_redirections_ls_right_arrow\n");
+    test_parser_command_with_redirections_ls_right_arrow();
+    printf("Test test_parser_command_with_redirections_ls_right_arrow passed\n");
+
+    printf("Test function test_parser_command_with_redirections_right_arrow\n");
+    test_parser_command_with_redirections_right_arrow();
+    printf("Test test_parser_command_with_redirections_right_arrow passed\n");
+
+    printf("Test function test_parser_command_with_redirections_left_arrow\n");
+    test_parser_command_with_redirections_left_arrow();
+    printf("Test test_parser_command_with_redirections_left_arrow passed\n");
+
+    printf("Test function test_parser_command_with_redirections_right_arrow_ls\n");
+    test_parser_command_with_redirections_right_arrow_ls();
+    printf("Test test_parser_command_with_redirections_right_arrow_ls passed\n");
+
 }
 
 void test_parse_command_no_arguments() {
@@ -594,4 +639,285 @@ void test_parse_pipeline_list_with_correct_pipelines_with_spaces_and_final_amper
 
     // Cleanup
     free_pipeline_list(pips);
+}
+void test_parser_command_with_redirections() {
+    char *input = "ls -l > foo";
+
+    // Call the function to test
+    command *cmd = parse_command(input);
+
+    // Check if the command name is correct
+    assert(strcmp(cmd->name, "ls") == 0);
+
+    // Check the correct number of arguments
+    assert(cmd->argc == 2);
+
+    // Check if the arguments are correct
+    assert(strcmp(cmd->argv[0], "ls") == 0);
+    assert(strcmp(cmd->argv[1], "-l") == 0);
+    assert(cmd->argv[2] == NULL);
+
+    // Check the correct number of redirections
+    assert(cmd->output_redirection_count == 1);
+
+    // Check if the redirections are correct
+    assert(cmd->output_redirections[0].type == REDIRECT_STDOUT);
+    assert(cmd->output_redirections[0].mode == REDIRECT_NO_OVERWRITE);
+    assert(strcmp(cmd->output_redirections[0].filename, "foo") == 0);
+
+    // Clean up
+    free_command(cmd);
+}
+
+void test_parser_command_with_various_redirections() {
+    char *input = "ls -l < foo >| bar fic 2>> baz < iota >> foo 2> bar bar";
+
+    // Call the function to test
+    command *cmd = parse_command(input);
+
+    // Check if the command name is correct
+    assert(strcmp(cmd->name, "ls") == 0);
+
+    // Check the correct number of arguments
+    assert(cmd->argc == 4);
+
+    // Check if the arguments are correct
+    assert(strcmp(cmd->argv[0], "ls") == 0);
+    assert(strcmp(cmd->argv[1], "-l") == 0);
+    assert(strcmp(cmd->argv[2], "fic") == 0);
+    assert(strcmp(cmd->argv[3], "bar") == 0);
+    assert(cmd->argv[4] == NULL);
+
+    // Check the correct input redirection
+    assert(cmd->input_redirection_filename != NULL);
+    assert(strcmp(cmd->input_redirection_filename, "iota") == 0);
+
+    // Check the correct number of output redirections
+    assert(cmd->output_redirection_count == 4);
+
+    // Check if the output redirections are correct
+
+    assert(cmd->output_redirections[0].type == REDIRECT_STDOUT);
+    assert(cmd->output_redirections[0].mode == REDIRECT_OVERWRITE);
+    assert(strcmp(cmd->output_redirections[0].filename, "bar") == 0);
+
+    assert(cmd->output_redirections[1].type == REDIRECT_STDERR);
+    assert(cmd->output_redirections[1].mode == REDIRECT_APPEND);
+    assert(strcmp(cmd->output_redirections[1].filename, "baz") == 0);
+
+    assert(cmd->output_redirections[2].type == REDIRECT_STDOUT);
+    assert(cmd->output_redirections[2].mode == REDIRECT_APPEND);
+    assert(strcmp(cmd->output_redirections[2].filename, "foo") == 0);
+
+    assert(cmd->output_redirections[3].type == REDIRECT_STDERR);
+    assert(cmd->output_redirections[3].mode == REDIRECT_NO_OVERWRITE);
+    assert(strcmp(cmd->output_redirections[3].filename, "bar") == 0);
+
+    // Clean up
+    free_command(cmd);
+}
+
+void test_parser_command_with_correct_but_weird_redirections() {
+    char *input = "ls -l >| foo 2>> bar fic";
+
+    // Call the function to test
+    command *cmd = parse_command(input);
+
+    // Check if the command name is correct
+    assert(strcmp(cmd->name, "ls") == 0);
+
+    // Check the correct number of arguments
+    assert(cmd->argc == 3);
+
+    // Check if the arguments are correct
+    assert(strcmp(cmd->argv[0], "ls") == 0);
+    assert(strcmp(cmd->argv[1], "-l") == 0);
+    assert(strcmp(cmd->argv[2], "fic") == 0);
+
+    // Check the correct number of redirections
+    assert(cmd->output_redirection_count == 2);
+
+    // Check if the redirections are correct
+    assert(cmd->output_redirections[0].type == REDIRECT_STDOUT);
+    assert(cmd->output_redirections[0].mode == REDIRECT_OVERWRITE);
+    assert(strcmp(cmd->output_redirections[0].filename, "foo") == 0);
+
+    assert(cmd->output_redirections[1].type == REDIRECT_STDERR);
+    assert(cmd->output_redirections[1].mode == REDIRECT_APPEND);
+    assert(strcmp(cmd->output_redirections[1].filename, "bar") == 0);
+
+    // Clean up
+    free_command(cmd);
+}
+
+void test_parser_command_with_redirections_and_misleading_arguments() {
+    char *input = "ls -l > foo bar fic 2>> baz < iota >> foo 2> bar bar";
+
+    // Call the function to test
+    command *cmd = parse_command(input);
+
+    // Check if the command name is correct
+    assert(strcmp(cmd->name, "ls") == 0);
+
+    // Check the correct number of arguments
+    assert(cmd->argc == 5);
+
+    // Check if the arguments are correct
+    assert(strcmp(cmd->argv[0], "ls") == 0);
+    assert(strcmp(cmd->argv[1], "-l") == 0);
+    assert(strcmp(cmd->argv[2], "bar") == 0);
+    assert(strcmp(cmd->argv[3], "fic") == 0);
+    assert(strcmp(cmd->argv[4], "bar") == 0);
+
+    // Check the correct input redirection
+    assert(cmd->input_redirection_filename != NULL);
+    assert(strcmp(cmd->input_redirection_filename, "iota") == 0);
+
+    // Check the correct number of output redirections
+    assert(cmd->output_redirection_count == 4);
+
+    // Check if the output redirections are correct
+    assert(cmd->output_redirections[0].type == REDIRECT_STDOUT);
+    assert(cmd->output_redirections[0].mode == REDIRECT_NO_OVERWRITE);
+    assert(strcmp(cmd->output_redirections[0].filename, "foo") == 0);
+
+    assert(cmd->output_redirections[1].type == REDIRECT_STDERR);
+    assert(cmd->output_redirections[1].mode == REDIRECT_APPEND);
+    assert(strcmp(cmd->output_redirections[1].filename, "baz") == 0);
+
+    assert(cmd->output_redirections[2].type == REDIRECT_STDOUT);
+    assert(cmd->output_redirections[2].mode == REDIRECT_APPEND);
+    assert(strcmp(cmd->output_redirections[2].filename, "foo") == 0);
+
+    assert(cmd->output_redirections[3].type == REDIRECT_STDERR);
+    assert(cmd->output_redirections[3].mode == REDIRECT_NO_OVERWRITE);
+    assert(strcmp(cmd->output_redirections[3].filename, "bar") == 0);
+
+    // Clean up
+    free_command(cmd);
+}
+
+void test_parser_command_with_redirections_ls_left_arrow() {
+    char* input = "ls <";
+
+    // Call the function to test
+    command *cmd = parse_command(input);
+
+    // Check if the command name is correct
+    assert(cmd->name == NULL);
+
+    // Check the correct number of arguments
+    assert(cmd->argc == 0);
+
+    // Check if the arguments are correct
+    assert(cmd->argv == NULL);
+
+    // Check the correct number of redirections
+    assert(cmd->output_redirection_count == 0);
+
+    // Check if the redirections are correct
+    assert(cmd->output_redirections == NULL);
+
+    // Clean up
+    free_command(cmd);
+}
+
+void test_parser_command_with_redirections_ls_right_arrow() {
+    char* input = "ls >";
+
+    // Call the function to test
+    command *cmd = parse_command(input);
+
+    // Check if the command name is correct
+    assert(cmd->name == NULL);
+
+    // Check the correct number of arguments
+    assert(cmd->argc == 0);
+
+    // Check if the arguments are correct
+    assert(cmd->argv == NULL);
+
+    // Check the correct number of redirections
+    assert(cmd->output_redirection_count == 0);
+
+    // Check if the redirections are correct
+    assert(cmd->output_redirections == NULL);
+
+    // Clean up
+    free_command(cmd);
+}
+
+void test_parser_command_with_redirections_right_arrow(){
+    char* input = ">";
+
+    // Call the function to test
+    command *cmd = parse_command(input);
+
+    // Check if the command name is correct
+    assert(cmd->name == NULL);
+
+    // Check the correct number of arguments
+    assert(cmd->argc == 0);
+
+    // Check if the arguments are correct
+    assert(cmd->argv == NULL);
+
+    // Check the correct number of redirections
+    assert(cmd->output_redirection_count == 0);
+
+    // Check if the redirections are correct
+    assert(cmd->output_redirections == NULL);
+
+    // Clean up
+    free_command(cmd);
+}
+
+void test_parser_command_with_redirections_left_arrow() {
+    char* input = "<";
+
+    // Call the function to test
+    command *cmd = parse_command(input);
+
+    // Check if the command name is correct
+    assert(cmd->name == NULL);
+
+    // Check the correct number of arguments
+    assert(cmd->argc == 0);
+
+    // Check if the arguments are correct
+    assert(cmd->argv == NULL);
+
+    // Check the correct number of redirections
+    assert(cmd->output_redirection_count == 0);
+
+    // Check if the redirections are correct
+    assert(cmd->output_redirections == NULL);
+
+    // Clean up
+    free_command(cmd);
+}
+
+void test_parser_command_with_redirections_right_arrow_ls() {
+    char* input = "> ls";
+
+    // Call the function to test
+    command *cmd = parse_command(input);
+
+    // Check if the command name is correct
+    assert(cmd->name == NULL);
+
+    // Check the correct number of arguments
+    assert(cmd->argc == 0);
+
+    // Check if the arguments are correct
+    assert(cmd->argv == NULL);
+
+    // Check the correct number of redirections
+    assert(cmd->output_redirection_count == 0);
+
+    // Check if the redirections are correct
+    assert(cmd->output_redirections == NULL);
+
+    // Clean up
+    free_command(cmd);
 }
