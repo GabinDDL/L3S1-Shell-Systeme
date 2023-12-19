@@ -5,11 +5,12 @@
 #include <string.h>
 
 #include "../../src/utils/core.h"
+#include "../../src/utils/jobs_core.h"
 
 void test_add_job_to_jobs();
 void test_remove_job_from_jobs();
 
-void test_core() {
+void test_jobs_core() {
     printf("Test function add_job_to_jobs\n");
     test_add_job_to_jobs();
     printf("Test add_job_to_jobs passed\n");

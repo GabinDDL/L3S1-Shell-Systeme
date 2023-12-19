@@ -8,6 +8,7 @@
 #include "run/run.h"
 #include "utils/constants.h"
 #include "utils/core.h"
+#include "utils/jobs_core.h"
 
 int main() {
     init_core();
@@ -32,6 +33,9 @@ int main() {
         int run_output = run_pipeline_list(current_pipeline_list);
 
         last_command_exit_value = run_output;
+        if (update_jobs() != SUCCESS) {
+            return EXIT_FAILURE;
+        }
 
         free(last_line_read);
         free_pipeline_list_without_jobs(current_pipeline_list);

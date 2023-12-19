@@ -14,9 +14,9 @@
 #include "../utils/constants.h"
 #include "../builtins/builtins.h"
 
-int run_command_without_redirections(const command *cmd);
+int run_command_without_redirections(command *cmd, bool is_job);
 
-int run_command(const command *cmd);
+int run_command(command *cmd, bool is_job);
 /* Run a command.
  * 
  * Parameters:
@@ -29,7 +29,7 @@ int run_command(const command *cmd);
  *  - Exit value from extern_command if the command was an external command.
  */
 
-int run_pipeline(const pipeline *pip);
+int run_pipeline(pipeline *pip);
 /* Run a pipeline.
  * 
  * Parameters:
@@ -42,7 +42,7 @@ int run_pipeline(const pipeline *pip);
  *  - Exit value from extern_command if the pipeline was an external command.
  */
 
-int run_pipeline_list(const pipeline_list *pips);
+int run_pipeline_list(pipeline_list *pips);
 /* Run a list of pipelines.
  * 
  * Parameters:

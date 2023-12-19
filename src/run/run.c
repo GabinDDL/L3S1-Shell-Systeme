@@ -1,11 +1,15 @@
 #include "run.h"
 #include <assert.h>
+#include <stdbool.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <wait.h>
 
 int max(int a, int b) {
     return (a > b) ? a : b;
 }
 
-int run_command_without_redirections(const command *cmd) {
+int run_command_without_redirections(command *cmd, bool is_job) {
 
     int return_value = 0;
 
@@ -21,18 +25,44 @@ int run_command_without_redirections(const command *cmd) {
         return_value = exit_jsh(cmd);
     } else if (strcmp(cmd->argv[0], "?") == 0) {
         return_value = print_last_command_result(cmd);
+    } else if (strcmp(cmd->argv[0], "jobs") == 0) {
+        return_value = jobs_command();
     } else {
-        return_value = extern_command(cmd);
-    }
+        if (is_job) {
+            return_value = extern_command(cmd);
+        } else {
+            int status; // status of the created process
+            pid_t pid = fork();
 
+            assert(pid != -1);
+
+            switch (pid) {
+            case 0:
+                return_value = extern_command(cmd);
+                if (return_value < 0) {
+                    perror("execvp");
+                    exit(errno);
+                }
+                exit(SUCCESS);
+                break;
+            default:
+                waitpid(pid, &status, 0);
+                assert(WIFEXITED(status));
+                return WEXITSTATUS(status);
+            }
+        }
+    }
+    if (is_job) {
+        exit(return_value);
+    }
     return return_value;
 }
 
-int handle_no_redirections(const command *cmd) {
-    return run_command_without_redirections(cmd);
+int handle_no_redirections(command *cmd, bool is_job) {
+    return run_command_without_redirections(cmd, is_job);
 }
 
-int handle_input_redirection(const command *cmd, int *stdin_copy) {
+int handle_input_redirection(command *cmd, int *stdin_copy) {
     int fd = open(cmd->input_redirection_filename, O_RDONLY);
     if (fd == -1) {
         if (errno == ENOENT) {
@@ -67,7 +97,7 @@ int get_output_flags(const output_redirection *output_redirection) {
     return output_flags;
 }
 
-int run_command_with_redirection(const command *cmd, int *stdout_pipe, int *stderr_pipe) {
+int run_command_with_redirection(command *cmd, int *stdout_pipe, int *stderr_pipe, bool is_job) {
     int return_value = 0;
     int stdout_copy = dup(STDOUT_FILENO);
     int stderr_copy = dup(STDERR_FILENO);
@@ -75,7 +105,7 @@ int run_command_with_redirection(const command *cmd, int *stdout_pipe, int *stde
     dup2(stderr_pipe[1], STDERR_FILENO);
     close(stdout_pipe[1]);
     close(stderr_pipe[1]);
-    return_value = run_command_without_redirections(cmd);
+    return_value = run_command_without_redirections(cmd, is_job);
     dup2(stdout_copy, STDOUT_FILENO);
     dup2(stderr_copy, STDERR_FILENO);
     close(stdout_copy);
@@ -83,7 +113,7 @@ int run_command_with_redirection(const command *cmd, int *stdout_pipe, int *stde
     return return_value;
 }
 
-void monitor_and_handle_pipes(const command *cmd, int *stdout_pipe, int *stderr_pipe, int *fd_list) {
+void monitor_and_handle_pipes(command *cmd, int *stdout_pipe, int *stderr_pipe, int *fd_list) {
     char stdout_buf[32];
     char stderr_buf[32];
 
@@ -197,7 +227,7 @@ void monitor_and_handle_pipes(const command *cmd, int *stdout_pipe, int *stderr_
     }
 }
 
-void close_fd_list(const command *cmd, int *fd_list, size_t fd_list_size) {
+void close_fd_list(command *cmd, int *fd_list, size_t fd_list_size) {
     for (int i = 0; i < fd_list_size; ++i) {
         if (fd_list[i] == -1) {
             continue;
@@ -211,7 +241,7 @@ void close_fd_list(const command *cmd, int *fd_list, size_t fd_list_size) {
     free(fd_list);
 }
 
-int handle_output_redirection(const command *cmd, int stdin_copy) {
+int handle_output_redirection(command *cmd, int stdin_copy, bool is_job) {
     int return_value = 0;
 
     int stdout_pipe[2];
@@ -235,7 +265,8 @@ int handle_output_redirection(const command *cmd, int stdin_copy) {
     if (pid == 0) {
         close(stdout_pipe[0]);
         close(stderr_pipe[0]);
-        exit(run_command_with_redirection(cmd, stdout_pipe, stderr_pipe)); // child process execute the command
+        exit(run_command_with_redirection(cmd, stdout_pipe, stderr_pipe,
+                                          is_job)); // child process execute the command
     } else {
         close(stdout_pipe[1]);
         close(stderr_pipe[1]);
@@ -312,16 +343,16 @@ int handle_output_redirection(const command *cmd, int stdin_copy) {
     }
 }
 
-int run_command(const command *cmd) {
+int run_command(command *cmd, bool is_job) {
 
     int return_value = 0;
 
     // No redirections
     if (cmd->input_redirection_filename == NULL) {
         if (cmd->output_redirection_count == 0) {
-            return handle_no_redirections(cmd);
+            return handle_no_redirections(cmd, is_job);
         } else {
-            return handle_output_redirection(cmd, STDIN_FILENO);
+            return handle_output_redirection(cmd, STDIN_FILENO, is_job);
         }
     }
 
@@ -336,25 +367,42 @@ int run_command(const command *cmd) {
 
     // Input redirection but no output redirection
     if (cmd->output_redirection_count == 0) {
-        return_value = run_command_without_redirections(cmd);
+        return_value = run_command_without_redirections(cmd, is_job);
         dup2(stdin_copy, STDIN_FILENO);
         return return_value;
     }
 
-    return handle_output_redirection(cmd, stdin_copy);
+    return handle_output_redirection(cmd, stdin_copy, is_job);
 }
 
-int run_pipeline(const pipeline *pip) {
+int run_pipeline(pipeline *pip) {
     assert(pip != NULL);
-
     int run_output = 0;
+    unsigned njob = job_number;
     for (size_t i = 0; i < pip->command_count; i++) {
-        run_output = run_command(pip->commands[i]);
+
+        // TODO: do the case of few commands (pipe)
+        if (pip->to_job) {
+            pid_t pid = fork();
+            if (pid == -1) {
+                print_error("fork: error to create a process");
+            }
+            if (pid == 0) {
+                run_command(pip->commands[i], true);
+            } else {
+                run_output = add_new_forked_process_to_jobs(pid, pip);
+            }
+        } else {
+            run_output = run_command(pip->commands[i], false);
+        }
+    }
+    if (njob != job_number) {
+        update_prompt();
     }
     return run_output;
 }
 
-int run_pipeline_list(const pipeline_list *pips) {
+int run_pipeline_list(pipeline_list *pips) {
     assert(pips != NULL);
 
     if (pips->pipeline_count == 0) {

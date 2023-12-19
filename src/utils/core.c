@@ -9,15 +9,14 @@
 
 #include "core.h"
 #include "int_utils.h"
+#include "jobs_core.h"
 
 char *current_folder;
 char *prompt;
-int job_number = 0;
 int last_command_exit_value = 0;
 char *last_reference_position;
 char *last_line_read;
 pipeline_list *current_pipeline_list = NULL;
-job **jobs = NULL;
 
 void print_error(const char *error) {
     fprintf(stderr, "%s\n", error);
@@ -64,16 +63,6 @@ void init_core() {
     memmove(last_reference_position, current_folder, len_current_folder + 1);
 }
 
-void free_job(job *j) {
-    if (j == NULL) {
-        return;
-    }
-    if (j->pipeline != NULL) {
-        free(j->pipeline);
-    }
-    free(j);
-}
-
 void free_core() {
     if (current_folder != NULL) {
         free(current_folder);
@@ -87,13 +76,8 @@ void free_core() {
     if (last_line_read != NULL) {
         free(last_line_read);
     }
-    if (jobs != NULL) {
-        for (size_t i; i < job_number; i++) {
-            free_job(jobs[i]);
-        }
-        free(jobs);
-    }
     free_pipeline_list(current_pipeline_list);
+    free_jobs_core();
 }
 
 int change_pwd(const char *path) {
@@ -113,68 +97,4 @@ void update_current_folder() {
 
     last_reference_position = current_folder;
     current_folder = new_current_folder;
-}
-
-int add_job_to_jobs(job *j) {
-    if (jobs == NULL) {
-        jobs = malloc(sizeof(job *));
-
-        assert(jobs != NULL);
-        jobs[0] = j;
-        job_number++;
-        return SUCCESS;
-    }
-    job **temp = malloc(sizeof(job *) * (job_number + 1));
-    assert(temp != NULL);
-
-    memmove(temp, jobs, job_number * sizeof(job *));
-    temp[job_number] = j;
-
-    free(jobs);
-    jobs = temp;
-
-    job_number++;
-
-    return SUCCESS;
-}
-
-int get_jobs_placement_with_id(unsigned id) {
-    job *acc;
-    for (int i = 0; i < job_number; i++) {
-        acc = jobs[i];
-        if (acc != NULL && acc->id == id) {
-            return i;
-        }
-    }
-    return -1;
-}
-
-int remove_job_from_jobs(unsigned id) {
-    if (jobs == NULL) {
-        return COMMAND_FAILURE;
-    }
-    int job_placement = get_jobs_placement_with_id(id);
-
-    if (job_placement < 0) {
-        return COMMAND_FAILURE;
-    }
-    job **temp = malloc(sizeof(job *) * (job_number - 1));
-
-    assert(temp != NULL);
-
-    memmove(temp, jobs, job_placement * sizeof(char *));
-    memmove(temp + job_placement, jobs + job_placement + 1, (job_number - job_placement - 1) * sizeof(char *));
-
-    job *j_removed = jobs[job_placement];
-    free_job(j_removed);
-
-    free(jobs);
-    jobs = temp;
-    job_number--;
-
-    if (job_number == 0) {
-        free(jobs);
-        jobs = NULL;
-    }
-    return SUCCESS;
 }

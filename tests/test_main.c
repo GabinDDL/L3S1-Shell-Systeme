@@ -2,7 +2,7 @@
 #include <assert.h>
 #include <stdio.h>
 
-#include "utils/test_core.h"
+#include "utils/test_jobs_core.h"
 #include "utils/test_int_utils.h"
 #include "utils/test_string_utils.h"
 int main() {
@@ -20,9 +20,9 @@ int main() {
     test_int_utils();
     printf("Test int_utils passed\n");
 
-    printf("Running test core\n");
-    test_core();
-    printf("Test core passed\n");
+    printf("Running test jobs_core\n");
+    test_jobs_core();
+    printf("Test jobs_core passed\n");
 
     printf("All test cases passed!\n");
 

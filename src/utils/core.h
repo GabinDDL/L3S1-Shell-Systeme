@@ -3,37 +3,16 @@
 
 #include "../parser/parser.h"
 #include "constants.h"
-#include <sys/types.h>
-
-/* ENUM */
-
-typedef enum { RUNNING, STOPPED, DETACHED, KILLED, DONE } Status;
-
-/* STRUCTURES */
-
-typedef struct process {
-    pid_t pid;
-    Status status;
-    command *cmd;
-} process;
-
-typedef struct job {
-    unsigned id;
-    pid_t pid;
-    Status status;
-    pipeline *pipeline;
-} job;
+#include "jobs_core.h"
 
 /* VARIABLES */
 
 extern char *current_folder; // current user position, initialized with PWD from constant
 extern char *prompt;         // command readout prompt
-extern int job_number;
-extern int last_command_exit_value;     // last user command exit value
-extern char *last_reference_position;   // last user location, initialized with PWD from constant
-extern char *last_line_read;            // last line typed by the user
+extern int last_command_exit_value;          // last user command exit value
+extern char *last_reference_position;        // last user location, initialized with PWD from constant
+extern char *last_line_read;                 // last line typed by the user
 extern pipeline_list *current_pipeline_list; // current_pipeline run
-extern job **jobs;
 
 /* FUNCTIONS */
 
@@ -57,12 +36,5 @@ int change_pwd(const char *);
 
 void update_current_folder();
 /* Changes the folder variable current_folder to the reference of the current directory */
-
-int add_job_to_jobs(job *);
-/* Adds a new job to the job list, and returns SUCESS if the command succeeds */
-
-int remove_job_from_jobs(unsigned);
-/* Removes the job with the given id from the list, and returns SUCESS if the command succeeds,
- * COMMAND_FAILURE if the job is not found */
 
 #endif
