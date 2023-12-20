@@ -19,7 +19,7 @@ void free_job(job *j) {
         return;
     }
     if (j->pipeline != NULL) {
-        free(j->pipeline);
+        free_pipeline(j->pipeline);
     }
     free(j);
 }
@@ -157,8 +157,8 @@ int remove_job_from_jobs(unsigned id) {
 
     assert(temp != NULL);
 
-    memmove(temp, jobs, job_placement * sizeof(char *));
-    memmove(temp + job_placement, jobs + job_placement + 1, (job_number - job_placement - 1) * sizeof(char *));
+    memmove(temp, jobs, job_placement * sizeof(job *));
+    memmove(temp + job_placement, jobs + job_placement + 1, (job_number - job_placement - 1) * sizeof(job *));
 
     job *j_removed = jobs[job_placement];
     free_job(j_removed);
