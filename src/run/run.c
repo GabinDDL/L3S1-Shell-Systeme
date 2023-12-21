@@ -52,9 +52,6 @@ int run_command_without_redirections(command *cmd, bool is_job) {
             }
         }
     }
-    if (is_job) {
-        exit(return_value);
-    }
     return return_value;
 }
 
@@ -388,7 +385,8 @@ int run_pipeline(pipeline *pip) {
                 print_error("fork: error to create a process");
             }
             if (pid == 0) {
-                run_command(pip->commands[i], true);
+                run_output = run_command(pip->commands[i], true);
+                exit(run_output);
             } else {
                 run_output = add_new_forked_process_to_jobs(pid, pip);
             }
