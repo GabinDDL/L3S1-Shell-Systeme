@@ -199,7 +199,7 @@ int update_status_of_job(job *j) {
 
 void remove_terminated_jobs(bool print) {
     unsigned njob = job_number;
-    for (size_t i = 0; i < job_number; i++) {
+    for (int i = 0; i < job_number; i++) {
         job *j = jobs[i];
 
         if (j->status == DONE || j->status == KILLED || j->status == DETACHED) {
@@ -207,6 +207,7 @@ void remove_terminated_jobs(bool print) {
                 print_job_ended(j);
             }
             remove_job_from_jobs(j->id);
+            i--;
         }
     }
 
