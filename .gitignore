@@ -55,3 +55,6 @@ dkms.conf
 bin/
 jsh
 .sy5-2023-2024-projet-jsh-autotests.nosync
+
+#VSCode files
+.vscode/

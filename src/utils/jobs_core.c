@@ -195,8 +195,8 @@ int update_status_of_job(job *j) {
         } else if (WIFSTOPPED(status)) {
             j->status = STOPPED;
         } else if (WIFCONTINUED(status)) {
-            print_job_ended(j);
             j->status = RUNNING;
+            print_job_ended(j);
         }
     }
     return SUCCESS;

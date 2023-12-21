@@ -27,6 +27,8 @@ int run_command_without_redirections(command *cmd, bool is_job, pipeline *pip) {
         return_value = print_last_command_result(cmd);
     } else if (strcmp(cmd->argv[0], "jobs") == 0) {
         return_value = print_jobs(cmd);
+    } else if (strcmp(cmd->argv[0], "kill") == 0) {
+        return_value = jsh_kill(cmd);
     } else {
         if (is_job) {
             return_value = extern_command(cmd);

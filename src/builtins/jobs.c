@@ -111,7 +111,6 @@ char *str_of_pipeline(pipeline *p) {
             result[marker + 2] = ' ';
             marker += 3;
         }
-        free(cmd);
     }
 
     result[marker] = '\0';
@@ -127,7 +126,7 @@ char *simple_str_of_job(job *j) {
     char *status = state_to_string(j->status);
     char *pipeline = str_of_pipeline(j->pipeline);
 
-    int result_length = strlen(status) + strlen(pipeline) + get_nb_of_digits(j->id) + get_nb_of_digits(j->pid) + 17;
+    int result_length = strlen(status) + strlen(pipeline) + get_nb_of_digits(j->id) + get_nb_of_digits(j->pid) + 18;
     char *result = malloc(result_length * sizeof(char));
 
     snprintf(result, result_length, "[%u]   %d        %s    %s", j->id, j->pid, status, pipeline);
