@@ -197,24 +197,26 @@ int update_status_of_job(job *j) {
     return SUCCESS;
 }
 
-int update_jobs() {
-    size_t i = 0;
+void remove_terminated_jobs(bool print) {
     unsigned njob = job_number;
-    while (i < job_number) {
+    for (size_t i = 0; i < job_number; i++) {
         job *j = jobs[i];
-        int res;
-        if ((res = update_status_of_job(j)) != SUCCESS) {
-            return res;
-        }
+
         if (j->status == DONE || j->status == KILLED || j->status == DETACHED) {
-            print_job_ended(j);
+            if (print) {
+                print_job_ended(j);
+            }
             remove_job_from_jobs(j->id);
-        } else {
-            i++;
         }
     }
+
     if (njob != job_number) {
         update_prompt();
     }
-    return SUCCESS;
+}
+
+void update_status_of_jobs() {
+    for (size_t i = 0; i < job_number; i++) {
+        update_status_of_job(jobs[i]);
+    }
 }

@@ -33,9 +33,8 @@ int main() {
         int run_output = run_pipeline_list(current_pipeline_list);
 
         last_command_exit_value = run_output;
-        if (update_jobs() != SUCCESS) {
-            return EXIT_FAILURE;
-        }
+        update_status_of_jobs();
+        remove_terminated_jobs(true);
 
         free(last_line_read);
         free_pipeline_list_without_jobs(current_pipeline_list);
