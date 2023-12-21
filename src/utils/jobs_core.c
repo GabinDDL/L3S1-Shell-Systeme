@@ -80,7 +80,7 @@ unsigned get_id_new_job() {
     return id;
 }
 
-job *init_job_to_add(pid_t pid, pipeline *pip) {
+job *init_job_to_add(pid_t pid, pipeline *pip, Status s) {
     unsigned id = get_id_new_job();
 
     job *new_job = malloc(sizeof(job));
@@ -89,7 +89,7 @@ job *init_job_to_add(pid_t pid, pipeline *pip) {
         return NULL;
     }
     new_job->pid = pid;
-    new_job->status = RUNNING;
+    new_job->status = s;
     new_job->id = id;
     new_job->pipeline = pip;
 
@@ -129,8 +129,8 @@ int add_job_to_jobs(job *j) {
     return SUCCESS;
 }
 
-int add_new_forked_process_to_jobs(pid_t pid, pipeline *pip) {
-    job *new_job = init_job_to_add(pid, pip);
+int add_new_forked_process_to_jobs(pid_t pid, pipeline *pip, Status s) {
+    job *new_job = init_job_to_add(pid, pip, s);
 
     if (new_job == NULL) {
         return EXIT_FAILURE;

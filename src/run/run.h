@@ -14,9 +14,9 @@
 #include "../utils/constants.h"
 #include "../builtins/builtins.h"
 
-int run_command_without_redirections(command *cmd, bool is_job);
+int run_command_without_redirections(command *cmd, bool is_job, pipeline* pip);
 
-int run_command(command *cmd, bool is_job);
+int run_command(command *cmd, bool is_job, pipeline* pip);
 /* Run a command.
  * 
  * Parameters:
