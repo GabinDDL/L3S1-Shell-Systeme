@@ -78,6 +78,11 @@ typedef struct {
 } pipeline_list;
 /* pipelines is a list of pipeline */
 
+char *str_of_pipeline(pipeline *p);
+/**
+ * Prints a pipeline on a single line
+ */
+
 command *parse_command(const char *input);
 /* parse_command takes a string and parses it into a command struct.
  * The string is expected to be a single command, with no pipes.

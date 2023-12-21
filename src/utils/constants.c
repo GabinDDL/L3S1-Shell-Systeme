@@ -21,6 +21,8 @@ const int COMMAND_NOT_FOUND = 127;
 const size_t PROMPT_MAX_VISIBLE_LEN = 30;
 const size_t LITTERAL_CHARS_COUNT = 4;
 
+const int FORMAT_SPECIFIERS_CHARACTERS_COUNT = 6;
+
 void init_const() {
     HOME = getenv("HOME");
 

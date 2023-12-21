@@ -2,7 +2,6 @@
 #define JOBS_CORE_H
 
 #include "../parser/parser.h"
-#include "../builtins/builtins.h"
 
 /* ENUM */
 
@@ -29,6 +28,15 @@ extern int job_number;
 extern job **jobs;
 
 /* FUNCTIONS */
+
+char *simple_str_of_job(job *, bool);
+/**
+ * Prints all informations from a job on a single line
+ * For example :
+ * [4] 591141  Running  ./a.out | wc -l > /tmp/tutu
+ * The bool argument tells the function if the job is new,
+ * in which case there is less spaces than usual
+ */
 
 void free_jobs_core();
 /* Free allocation of all jobs and their pipelines */

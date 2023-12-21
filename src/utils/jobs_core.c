@@ -1,6 +1,7 @@
 #include "jobs_core.h"
 #include "constants.h"
 #include "core.h"
+#include "int_utils.h"
 #include <assert.h>
 #include <errno.h>
 #include <inttypes.h>
@@ -49,23 +50,40 @@ char *state_to_string(Status status) {
     return strdup("Done");
 }
 
-void print_new_job_added(job *j) {
+char *simple_str_of_job(job *j, bool new) {
+    char *status = state_to_string(j->status);
+    char *pipeline = str_of_pipeline(j->pipeline);
+
+    int result_length;
+    char *result;
+    char *format;
+
+    if (new) {
+        format = strdup("[%u]   %d        %s %s");
+    } else {
+        format = strdup("[%u]   %d        %s    %s");
+    }
+
+    result_length = strlen(format) + strlen(status) + strlen(pipeline) + get_nb_of_digits(j->id) +
+                    get_nb_of_digits(j->pid) - FORMAT_SPECIFIERS_CHARACTERS_COUNT;
+
+    result = malloc(result_length * sizeof(char));
+    snprintf(result, result_length, format, j->id, j->pid, status, pipeline);
+
+    free(format);
+    free(status);
+    free(pipeline);
+
+    return result;
+}
+
+void print_job(job *j, bool new) {
     if (j == NULL) {
         return;
     }
-    char *state = state_to_string(j->status);
-    char *pipeline = str_of_pipeline(j->pipeline);
-    fprintf(stderr, "[%u]   %jd        %s %s\n", j->id, (intmax_t)j->pid, state, pipeline);
-    free(pipeline);
-    free(state);
-}
-
-void print_job_ended(job *j) {
-    char *state = state_to_string(j->status);
-    char *pipeline = str_of_pipeline(j->pipeline);
-    fprintf(stderr, "[%u]   %jd        %s    %s\n", j->id, (intmax_t)j->pid, state, pipeline);
-    free(pipeline);
-    free(state);
+    char *strjb = simple_str_of_job(j, new);
+    fprintf(stderr, "%s\n", strjb);
+    free(strjb);
 }
 
 unsigned get_id_new_job() {
@@ -145,7 +163,7 @@ int add_new_forked_process_to_jobs(pid_t pid, pipeline *pip, Status s) {
     if (res != 0) {
         return res;
     }
-    print_new_job_added(new_job);
+    print_job(new_job, true);
     return SUCCESS;
 }
 
@@ -196,7 +214,7 @@ int update_status_of_job(job *j) {
             j->status = STOPPED;
         } else if (WIFCONTINUED(status)) {
             j->status = RUNNING;
-            print_job_ended(j);
+            print_job(j, false);
         }
     }
     return SUCCESS;
@@ -209,7 +227,7 @@ void remove_terminated_jobs(bool print) {
 
         if (j->status == DONE || j->status == KILLED || j->status == DETACHED) {
             if (print) {
-                print_job_ended(j);
+                print_job(j, false);
             }
             remove_job_from_jobs(j->id);
             i--;
