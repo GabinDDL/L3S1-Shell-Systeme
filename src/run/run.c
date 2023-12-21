@@ -2,8 +2,8 @@
 #include <assert.h>
 #include <stdbool.h>
 #include <stdlib.h>
+#include <sys/wait.h>
 #include <unistd.h>
-#include <wait.h>
 
 int max(int a, int b) {
     return (a > b) ? a : b;
@@ -26,7 +26,7 @@ int run_command_without_redirections(command *cmd, bool is_job) {
     } else if (strcmp(cmd->argv[0], "?") == 0) {
         return_value = print_last_command_result(cmd);
     } else if (strcmp(cmd->argv[0], "jobs") == 0) {
-        return_value = jobs_command();
+        return_value = print_jobs(cmd);
     } else {
         if (is_job) {
             return_value = extern_command(cmd);

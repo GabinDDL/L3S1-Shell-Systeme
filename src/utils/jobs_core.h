@@ -2,6 +2,7 @@
 #define JOBS_CORE_H
 
 #include "../parser/parser.h"
+#include "../builtins/builtins.h"
 
 /* ENUM */
 
@@ -32,6 +33,9 @@ extern job **jobs;
 void free_jobs_core();
 /* Free allocation of all jobs and their pipelines */
 
+char *state_to_string(Status);
+/*From a status, returns the corresponding string*/
+
 int add_job_to_jobs(job *);
 /* Adds a new job to the job list, and returns SUCCESS if the command succeeds */
 
@@ -45,8 +49,5 @@ int remove_job_from_jobs(unsigned);
 int update_jobs();
 /* Updates job status and removes jobs from list if done, detached or killed
  * Returns SUCCESS if it succeeds */
-
-int jobs_command();
-/* TODO: function to debug, it will be replaced by the good one */
 
 #endif

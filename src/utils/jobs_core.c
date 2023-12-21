@@ -26,7 +26,7 @@ void free_job(job *j) {
 
 void free_jobs_core() {
     if (jobs != NULL) {
-        for (size_t i; i < job_number; i++) {
+        for (size_t i = 0; i < job_number; i++) {
             free_job(jobs[i]);
         }
         free(jobs);
@@ -35,31 +35,31 @@ void free_jobs_core() {
 
 char *state_to_string(Status status) {
     if (status == RUNNING) {
-        return strdup("running");
+        return strdup("Running");
     }
     if (status == STOPPED) {
-        return strdup("stopped");
+        return strdup("Stopped");
     }
     if (status == DETACHED) {
-        return strdup("detached");
+        return strdup("Detached");
     }
     if (status == KILLED) {
-        return strdup("killed");
+        return strdup("Killed");
     }
-    return strdup("done");
+    return strdup("Done");
 }
 
 void print_new_job_added(job *j) {
     if (j == NULL) {
         return;
     }
-    fprintf(stderr, "[%u] %jd\n", j->id, (intmax_t)j->pid);
+    char *state = state_to_string(j->status);
+    fprintf(stderr, "[%u]   %jd        %s %s\n", j->id, (intmax_t)j->pid, state, str_of_pipeline(j->pipeline));
 }
 
 void print_job_ended(job *j) {
     char *state = state_to_string(j->status);
-    // TODO: add the pipeline print
-    fprintf(stderr, "[%u]  + %jd %s   TODO\n", j->id, (intmax_t)j->pid, state);
+    fprintf(stderr, "[%u]   %jd        %s    %s\n", j->id, (intmax_t)j->pid, state, str_of_pipeline(j->pipeline));
     free(state);
 }
 
@@ -214,14 +214,6 @@ int update_jobs() {
     }
     if (njob != job_number) {
         update_prompt();
-    }
-    return SUCCESS;
-}
-
-int jobs_command() {
-    for (size_t i = 0; i < job_number; i++) {
-        char *state = state_to_string(jobs[i]->status);
-        fprintf(stderr, "[%u]  + %jd %s   TODO\n", jobs[i]->id, (intmax_t)jobs[i]->pid, state);
     }
     return SUCCESS;
 }
