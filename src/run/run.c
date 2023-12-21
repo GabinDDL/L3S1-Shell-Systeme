@@ -388,6 +388,7 @@ int run_pipeline(pipeline *pip) {
                 run_output = run_command(pip->commands[i], true);
                 exit(run_output);
             } else {
+                setpgid(pid, 0);
                 run_output = add_new_forked_process_to_jobs(pid, pip);
             }
         } else {
