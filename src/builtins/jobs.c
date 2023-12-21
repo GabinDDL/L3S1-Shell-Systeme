@@ -23,6 +23,7 @@ char *str_of_output_redirection(output_redirection *redir) {
     size_t result_length = strlen(s) + strlen(redir->filename) + 3;
     char *result = malloc(result_length * sizeof(char));
     snprintf(result, result_length, " %s %s", s, redir->filename);
+    free(s);
     return result;
 }
 
@@ -75,6 +76,7 @@ char *str_of_command(const command *cmd) {
     for (size_t i = 0; i < cmd->output_redirection_count; ++i) {
         char *redirection = str_of_output_redirection(cmd->output_redirections + i);
         marker += snprintf(result + marker, strlen(redirection) + 1, "%s", redirection);
+        free(redirection);
     }
 
     result[marker] = '\0';
@@ -102,12 +104,14 @@ char *str_of_pipeline(pipeline *p) {
     for (size_t i = 0; i < p->command_count; ++i) {
         char *cmd = str_of_command(p->commands[i]);
         marker += snprintf(result, strlen(cmd) + 1, "%s", cmd);
+        free(cmd);
         if (i < p->command_count - 1) {
             result[marker] = ' ';
             result[marker + 1] = '|';
             result[marker + 2] = ' ';
             marker += 3;
         }
+        free(cmd);
     }
 
     result[marker] = '\0';
@@ -127,6 +131,9 @@ char *simple_str_of_job(job *j) {
     char *result = malloc(result_length * sizeof(char));
 
     snprintf(result, result_length, "[%u]   %d        %s    %s", j->id, j->pid, status, pipeline);
+
+    free(status);
+    free(pipeline);
 
     return result;
 }
