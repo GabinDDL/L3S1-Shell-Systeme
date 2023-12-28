@@ -462,7 +462,7 @@ command *parse_command(const char *input) {
     return cmd;
 }
 
-pipeline *parse_pipeline(const char *input, bool to_job, bool can_be_empty) {
+pipeline *parse_pipeline(const char *input, bool to_job) {
     pipeline *pip = malloc(sizeof(pipeline));
     assert(pip != NULL);
 
@@ -476,7 +476,7 @@ pipeline *parse_pipeline(const char *input, bool to_job, bool can_be_empty) {
         free(pip);
         return NULL;
     }
-    if (pip->commands[0]->name == NULL && !can_be_empty) {
+    if (pip->commands[0]->name == NULL && to_job) {
         free_pipeline(pip);
         return NULL;
     }
@@ -511,7 +511,7 @@ pipeline_list *parse_pipeline_list(const char *input) {
     assert(pips->pipelines != NULL);
 
     for (size_t i = 0; i < token_count - 1; i++) {
-        pips->pipelines[i] = parse_pipeline(tokens[i], true, false);
+        pips->pipelines[i] = parse_pipeline(tokens[i], true);
 
         if (pips->pipelines[i] == NULL) {
             free_tokens(tokens, token_count);
@@ -521,8 +521,7 @@ pipeline_list *parse_pipeline_list(const char *input) {
         pips->pipeline_count += 1;
     }
     bool last_pipeline_to_job = input[strlen(input) - 1] == TOKEN_PIPELINE_DELIM_C;
-    pips->pipelines[token_count - 1] =
-        parse_pipeline(tokens[token_count - 1], last_pipeline_to_job, !last_pipeline_to_job);
+    pips->pipelines[token_count - 1] = parse_pipeline(tokens[token_count - 1], last_pipeline_to_job);
     if (pips->pipelines[token_count - 1] == NULL) {
         free_tokens(tokens, token_count);
         free_pipeline_list(pips);
