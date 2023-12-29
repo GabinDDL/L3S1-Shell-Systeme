@@ -44,9 +44,9 @@ int run_command_without_redirections(command *cmd, bool is_job, pipeline *pip) {
                 exit(SUCCESS);
                 break;
             default:
-                setpgid(pid, pid);
                 waitpid(pid, &status, WUNTRACED);
                 if (WIFSTOPPED(status)) {
+                    setpgid(pid, pid);
                     pip->to_job = true;
                     add_new_forked_process_to_jobs(pid, pip, STOPPED);
                 }
