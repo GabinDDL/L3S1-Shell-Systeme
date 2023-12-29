@@ -14,20 +14,24 @@
 #define TOKEN_PIPELINE_DELIM_C '&'
 
 typedef enum {
+    REDIRECT_STDIN,
     REDIRECT_STDOUT,
     REDIRECT_STDERR,
 } RedirectionType;
 /* Types of redirections supported:
+ *  - Redirect stdin
  *  - Redirect stdout
  *  - Redirect stderr
  */
 
 typedef enum {
+    REDIRECT_NONE,
     REDIRECT_OVERWRITE,
     REDIRECT_APPEND,
     REDIRECT_NO_OVERWRITE,
 } RedirectionMode;
 /* Modes of redirections supported:
+ *  - No redirection mode (stdin)
  *  - Overwrite the file
  *  - Append to the file
  *  - Don't overwrite the file
@@ -37,31 +41,25 @@ typedef struct {
     RedirectionType type;
     RedirectionMode mode;
     char *filename;
-} output_redirection;
+} redirection;
 
 typedef struct {
     char *name;
     size_t argc;
     char **argv;
-    char *input_redirection_filename;
-    size_t output_redirection_count;
-    output_redirection *output_redirections;
+    size_t redirection_count;
+    redirection *redirections;
 } command;
 /*
     * A command is a single command with its arguments and redirections.
     * For example, the command "ls -l > foo" would be parsed as:
-    *  - name: "ls"
-    *  - argc: 2
-    *  - argv: ["ls", "-l", NULL]
-    *  - input_redirection_filename: NULL
-    *  - output_redirection_count: 1
-    *  - output_redirections: [
-    *      {
-    *          type: REDIRECT_STDOUT,
-    *          mode: REDIRECT_OVERWRITE,
-    *          filename: "foo"
-    *      }
-    *  ]
+    * - name: "ls"
+    * - argc: 2
+    * - argv: ["ls", "-l"]
+    * - redirection_count: 1
+    * - output_redirections: [{type: REDIRECT_STDOUT, mode: REDIRECT_NO_OVERWRITE, filename: "foo"}]
+    * The command struct is allocated on the heap, so it must be freed with free_command.
+    * If the command is invalid, parse_command returns NULL.
     */
 
 typedef struct {

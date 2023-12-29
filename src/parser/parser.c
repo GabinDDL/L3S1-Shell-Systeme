@@ -5,14 +5,16 @@
 #include <string.h>
 
 /**
- * Returns the string corresponding to an output_redirection
+ * Returns the string corresponding to a redirection
  * Example :
  *  - " >> a.out"
  */
-char *str_of_output_redirection(output_redirection *redir) {
+char *str_of_redirection(redirection *redir) {
 
     char *s;
-    if (redir->type == REDIRECT_STDOUT && redir->mode == REDIRECT_NO_OVERWRITE) {
+    if (redir->type == REDIRECT_STDIN && redir->mode == REDIRECT_NONE) {
+        s = strdup("<");
+    } else if (redir->type == REDIRECT_STDOUT && redir->mode == REDIRECT_NO_OVERWRITE) {
         s = strdup(">");
     } else if (redir->type == REDIRECT_STDOUT && redir->mode == REDIRECT_OVERWRITE) {
         s = strdup(">|");
@@ -46,20 +48,18 @@ char *str_of_command(const command *cmd) {
         }
     }
 
-    if (cmd->input_redirection_filename != NULL) {
-        result_length += strlen(cmd->input_redirection_filename) + 3;
-    }
+    for (size_t i = 0; i < cmd->redirection_count; ++i) {
+        RedirectionType redir_type = (cmd->redirections + 1)->type;
+        RedirectionMode redir_mode = (cmd->redirections + 1)->mode;
 
-    for (size_t i = 0; i < cmd->output_redirection_count; ++i) {
-        RedirectionType redir_type = (cmd->output_redirections + 1)->type;
-        RedirectionMode redir_mode = (cmd->output_redirections + 1)->mode;
-
-        if (redir_type == REDIRECT_STDOUT && redir_mode == REDIRECT_NO_OVERWRITE) {
-            result_length += 3 + strlen((cmd->output_redirections + i)->filename);
+        if (redir_type == REDIRECT_STDIN && redir_mode == REDIRECT_NONE) {
+            result_length += 3 + strlen((cmd->redirections + i)->filename);
+        } else if (redir_type == REDIRECT_STDOUT && redir_mode == REDIRECT_NO_OVERWRITE) {
+            result_length += 3 + strlen((cmd->redirections + i)->filename);
         } else if (redir_type == REDIRECT_STDERR && redir_mode == REDIRECT_APPEND) {
-            result_length += 5 + strlen((cmd->output_redirections + i)->filename);
+            result_length += 5 + strlen((cmd->redirections + i)->filename);
         } else {
-            result_length += 4 + strlen((cmd->output_redirections + i)->filename);
+            result_length += 4 + strlen((cmd->redirections + i)->filename);
         }
     }
 
@@ -74,13 +74,8 @@ char *str_of_command(const command *cmd) {
         }
     }
 
-    if (cmd->input_redirection_filename != NULL) {
-        marker += snprintf(result + marker, strlen(cmd->input_redirection_filename) + 4, "< %s ",
-                           cmd->input_redirection_filename);
-    }
-
-    for (size_t i = 0; i < cmd->output_redirection_count; ++i) {
-        char *redirection = str_of_output_redirection(cmd->output_redirections + i);
+    for (size_t i = 0; i < cmd->redirection_count; ++i) {
+        char *redirection = str_of_redirection(cmd->redirections + i);
         marker += snprintf(result + marker, strlen(redirection) + 1, "%s", redirection);
         free(redirection);
     }
@@ -163,17 +158,10 @@ char **tokenize(const char *input, size_t *token_count, const char *delimiter) {
 }
 
 /*
- * Returns 1 if the token is an input redirection symbol, 0 otherwise.
+ * Returns 1 if the token is an redirection symbol, 0 otherwise.
  */
-int is_input_redirection(const char *token) {
-    return strcmp(token, "<") == 0;
-}
-
-/*
- * Returns 1 if the token is an output redirection symbol, 0 otherwise.
- */
-int is_output_redirection(const char *token) {
-    return strcmp(token, ">") == 0 || strcmp(token, ">|") == 0 || strcmp(token, ">>") == 0 ||
+int is_redirection(const char *token) {
+    return strcmp(token, "<") == 0 || strcmp(token, ">") == 0 || strcmp(token, ">|") == 0 || strcmp(token, ">>") == 0 ||
            strcmp(token, "2>") == 0 || strcmp(token, "2>|") == 0 || strcmp(token, "2>>") == 0;
 }
 
@@ -182,8 +170,8 @@ void handle_parse_error(char **tokens, size_t token_count, command *cmd) {
     free_command(cmd);
 }
 
-command *finalize_command_reallocation(char **tokens, size_t token_count, command *cmd, size_t output_redirection_count,
-                                       output_redirection *output_redirections) {
+command *finalize_command_reallocation(char **tokens, size_t token_count, command *cmd, size_t redirection_count,
+                                       redirection *redirections) {
     // Reajust the size of the argv array
     char **tmp_argv = realloc(cmd->argv, sizeof(char *) * (cmd->argc + 1));
     if (tmp_argv == NULL) {
@@ -193,22 +181,21 @@ command *finalize_command_reallocation(char **tokens, size_t token_count, comman
     cmd->argv = tmp_argv;
 
     // Reajust the size of the output redirections array
-    cmd->output_redirection_count = output_redirection_count;
-    if (output_redirection_count == 0) {
-        free(output_redirections);
-        cmd->output_redirections = NULL;
+    cmd->redirection_count = redirection_count;
+    if (redirection_count == 0) {
+        free(redirections);
+        cmd->redirections = NULL;
         free_tokens(tokens, token_count);
         return cmd;
     }
 
-    output_redirection *tmp_output_redirection =
-        realloc(output_redirections, sizeof(output_redirection) * output_redirection_count);
-    if (tmp_output_redirection == NULL) {
+    redirection *tmp_redirection = realloc(redirections, sizeof(redirection) * redirection_count);
+    if (tmp_redirection == NULL) {
         handle_parse_error(tokens, token_count, cmd);
         return NULL;
     }
 
-    cmd->output_redirections = tmp_output_redirection;
+    cmd->redirections = tmp_redirection;
 
     free_tokens(tokens, token_count);
     return cmd;
@@ -229,158 +216,112 @@ void reinitialize_command(command *cmd) {
     }
     cmd->argv = NULL;
     cmd->argc = 0;
-    if (cmd->input_redirection_filename != NULL) {
-        free(cmd->input_redirection_filename);
-    }
-    cmd->input_redirection_filename = NULL;
-    for (size_t i = 0; i < cmd->output_redirection_count; ++i) {
-        if (cmd->output_redirections[i].filename != NULL) {
-            free(cmd->output_redirections[i].filename);
-            cmd->output_redirections[i].filename = NULL;
+
+    for (size_t i = 0; i < cmd->redirection_count; ++i) {
+        if (cmd->redirections[i].filename != NULL) {
+            free(cmd->redirections[i].filename);
+            cmd->redirections[i].filename = NULL;
         }
     }
-    if (cmd->output_redirections != NULL) {
-        free(cmd->output_redirections);
+    if (cmd->redirections != NULL) {
+        free(cmd->redirections);
     }
-    cmd->output_redirections = NULL;
-    cmd->output_redirection_count = 0;
+    cmd->redirections = NULL;
+    cmd->redirection_count = 0;
 }
 
 command *parse_redirections(char **tokens, size_t token_count, command *cmd) {
 
-    cmd->input_redirection_filename = NULL;
-    cmd->output_redirection_count = 0;
-    cmd->output_redirections = NULL;
+    cmd->redirection_count = 0;
+    cmd->redirections = NULL;
 
-    size_t output_redirection_count = 0;
+    size_t redirection_count = 0;
 
-    output_redirection *output_redirections = malloc(sizeof(output_redirection) * token_count);
+    redirection *redirections = malloc(sizeof(redirection) * token_count);
 
-    if (output_redirections == NULL) {
+    if (redirections == NULL) {
         handle_parse_error(tokens, token_count, cmd);
         return NULL;
     }
 
     size_t i = 0;
     for (i = cmd->argc; i < token_count;) {
-        if (is_input_redirection(tokens[i])) {
+        if (is_redirection(tokens[i])) {
             if (i + 1 >= token_count) {
                 reinitialize_command(cmd);
                 fprintf(stderr, "jsh: parse error near `%s'\n", tokens[i]);
                 free_tokens(tokens, token_count);
-                for (size_t i = 0; i < output_redirection_count; ++i) {
-                    if (output_redirections[i].filename != NULL) {
-                        free(output_redirections[i].filename);
+                for (size_t i = 0; i < redirection_count; ++i) {
+                    if (redirections[i].filename != NULL) {
+                        free(redirections[i].filename);
                     }
                 }
-                free(output_redirections);
+                free(redirections);
                 return cmd;
             }
 
-            if (cmd->input_redirection_filename != NULL) {
-                free(cmd->input_redirection_filename);
-            }
-
-            if (is_input_redirection(tokens[i + 1]) || is_output_redirection(tokens[i + 1])) {
-                reinitialize_command(cmd);
-                fprintf(stderr, "jsh: parse error near `%s'\n", tokens[i]);
-                free_tokens(tokens, token_count);
-                for (size_t i = 0; i < output_redirection_count; ++i) {
-                    if (output_redirections[i].filename != NULL) {
-                        free(output_redirections[i].filename);
-                    }
-                }
-                free(output_redirections);
-                return cmd;
-            }
-
-            cmd->input_redirection_filename = strdup(tokens[i + 1]);
-            if (cmd->input_redirection_filename == NULL) {
-                reinitialize_command(cmd);
-                free_tokens(tokens, token_count);
-                for (size_t i = 0; i < output_redirection_count; ++i) {
-                    if (output_redirections[i].filename != NULL) {
-                        free(output_redirections[i].filename);
-                    }
-                }
-                free(output_redirections);
-                return cmd;
-            }
-
-            i += 2;
-        } else if (is_output_redirection(tokens[i])) {
-            if (i + 1 >= token_count) {
-                reinitialize_command(cmd);
-                fprintf(stderr, "jsh: parse error near `%s'\n", tokens[i]);
-                free_tokens(tokens, token_count);
-                for (size_t i = 0; i < output_redirection_count; ++i) {
-                    if (output_redirections[i].filename != NULL) {
-                        free(output_redirections[i].filename);
-                    }
-                }
-                free(output_redirections);
-                return cmd;
-            }
-
-            if (strcmp(tokens[i], ">") == 0) {
-                output_redirections[output_redirection_count].type = REDIRECT_STDOUT;
-                output_redirections[output_redirection_count].mode = REDIRECT_NO_OVERWRITE;
+            if (strcmp(tokens[i], "<") == 0) {
+                redirections[redirection_count].type = REDIRECT_STDIN;
+                redirections[redirection_count].mode = REDIRECT_NONE;
+            } else if (strcmp(tokens[i], ">") == 0) {
+                redirections[redirection_count].type = REDIRECT_STDOUT;
+                redirections[redirection_count].mode = REDIRECT_NO_OVERWRITE;
             } else if (strcmp(tokens[i], ">|") == 0) {
-                output_redirections[output_redirection_count].type = REDIRECT_STDOUT;
-                output_redirections[output_redirection_count].mode = REDIRECT_OVERWRITE;
+                redirections[redirection_count].type = REDIRECT_STDOUT;
+                redirections[redirection_count].mode = REDIRECT_OVERWRITE;
             } else if (strcmp(tokens[i], ">>") == 0) {
-                output_redirections[output_redirection_count].type = REDIRECT_STDOUT;
-                output_redirections[output_redirection_count].mode = REDIRECT_APPEND;
+                redirections[redirection_count].type = REDIRECT_STDOUT;
+                redirections[redirection_count].mode = REDIRECT_APPEND;
             } else if (strcmp(tokens[i], "2>") == 0) {
-                output_redirections[output_redirection_count].type = REDIRECT_STDERR;
-                output_redirections[output_redirection_count].mode = REDIRECT_NO_OVERWRITE;
+                redirections[redirection_count].type = REDIRECT_STDERR;
+                redirections[redirection_count].mode = REDIRECT_NO_OVERWRITE;
             } else if (strcmp(tokens[i], "2>|") == 0) {
-                output_redirections[output_redirection_count].type = REDIRECT_STDERR;
-                output_redirections[output_redirection_count].mode = REDIRECT_OVERWRITE;
+                redirections[redirection_count].type = REDIRECT_STDERR;
+                redirections[redirection_count].mode = REDIRECT_OVERWRITE;
             } else if (strcmp(tokens[i], "2>>") == 0) {
-                output_redirections[output_redirection_count].type = REDIRECT_STDERR;
-                output_redirections[output_redirection_count].mode = REDIRECT_APPEND;
+                redirections[redirection_count].type = REDIRECT_STDERR;
+                redirections[redirection_count].mode = REDIRECT_APPEND;
             }
 
-            if (is_input_redirection(tokens[i + 1]) || is_output_redirection(tokens[i + 1])) {
+            if (is_redirection(tokens[i + 1])) {
                 reinitialize_command(cmd);
                 fprintf(stderr, "jsh: parse error near `%s'\n", tokens[i]);
                 free_tokens(tokens, token_count);
-                for (size_t i = 0; i < output_redirection_count; ++i) {
-                    if (output_redirections[i].filename != NULL) {
-                        free(output_redirections[i].filename);
+                for (size_t i = 0; i < redirection_count; ++i) {
+                    if (redirections[i].filename != NULL) {
+                        free(redirections[i].filename);
                     }
                 }
-                free(output_redirections);
+                free(redirections);
                 return cmd;
             }
 
-            output_redirections[output_redirection_count].filename = strdup(tokens[i + 1]);
-            if (output_redirections[output_redirection_count].filename == NULL) {
+            redirections[redirection_count].filename = strdup(tokens[i + 1]);
+            if (redirections[redirection_count].filename == NULL) {
                 reinitialize_command(cmd);
                 fprintf(stderr, "jsh: parse error near `%s'\n", tokens[i]);
                 free_tokens(tokens, token_count);
-                for (size_t i = 0; i < output_redirection_count; ++i) {
-                    if (output_redirections[i].filename != NULL) {
-                        free(output_redirections[i].filename);
+                for (size_t i = 0; i < redirection_count; ++i) {
+                    if (redirections[i].filename != NULL) {
+                        free(redirections[i].filename);
                     }
                 }
-                free(output_redirections);
+                free(redirections);
                 return cmd;
             }
 
-            ++output_redirection_count;
+            ++redirection_count;
             i += 2;
         } else {
             cmd->argv[cmd->argc] = strdup(tokens[i]);
             if (cmd->argv[cmd->argc] == NULL) {
                 handle_parse_error(tokens, token_count, cmd);
-                for (size_t i = 0; i < output_redirection_count; ++i) {
-                    if (output_redirections[i].filename != NULL) {
-                        free(output_redirections[i].filename);
+                for (size_t i = 0; i < redirection_count; ++i) {
+                    if (redirections[i].filename != NULL) {
+                        free(redirections[i].filename);
                     }
                 }
-                free(output_redirections);
+                free(redirections);
                 return NULL;
             }
             ++cmd->argc;
@@ -390,14 +331,13 @@ command *parse_redirections(char **tokens, size_t token_count, command *cmd) {
         cmd->argv[cmd->argc] = NULL;
     }
 
-    if (finalize_command_reallocation(tokens, token_count, cmd, output_redirection_count, output_redirections) ==
-        NULL) {
-        for (size_t i = 0; i < output_redirection_count; ++i) {
-            if (output_redirections[i].filename != NULL) {
-                free(output_redirections[i].filename);
+    if (finalize_command_reallocation(tokens, token_count, cmd, redirection_count, redirections) == NULL) {
+        for (size_t i = 0; i < redirection_count; ++i) {
+            if (redirections[i].filename != NULL) {
+                free(redirections[i].filename);
             }
         }
-        free(output_redirections);
+        free(redirections);
         return NULL;
     }
     return cmd;
@@ -418,21 +358,19 @@ command *parse_command(const char *input) {
         cmd->name = NULL;
         cmd->argc = 0;
         cmd->argv = NULL;
-        cmd->input_redirection_filename = NULL;
-        cmd->output_redirection_count = 0;
-        cmd->output_redirections = NULL;
+        cmd->redirection_count = 0;
+        cmd->redirections = NULL;
         free_tokens(tokens, token_count);
         return cmd;
     }
 
-    if (is_input_redirection(tokens[0]) || is_output_redirection(tokens[0])) { // If Spaces only
+    if (is_redirection(tokens[0])) { // If Spaces only
         fprintf(stderr, "jsh: parse error near `%s'\n", tokens[0]);
         cmd->name = NULL;
         cmd->argc = 0;
         cmd->argv = NULL;
-        cmd->input_redirection_filename = NULL;
-        cmd->output_redirection_count = 0;
-        cmd->output_redirections = NULL;
+        cmd->redirection_count = 0;
+        cmd->redirections = NULL;
         free_tokens(tokens, token_count);
         return cmd;
     }
@@ -445,7 +383,7 @@ command *parse_command(const char *input) {
 
     size_t i = 0;
     for (i = 0; i < cmd->argc; ++i) {
-        if (is_input_redirection(tokens[i]) || is_output_redirection(tokens[i])) {
+        if (is_redirection(tokens[i])) {
             break;
         }
         cmd->argv[i] = strdup(tokens[i]);
@@ -555,20 +493,16 @@ void free_command(command *cmd) {
         free(cmd->argv);
     cmd->argv = NULL;
 
-    if (cmd->input_redirection_filename != NULL)
-        free(cmd->input_redirection_filename);
-    cmd->input_redirection_filename = NULL;
-
-    for (i = 0; i < cmd->output_redirection_count; ++i) {
-        if (cmd->output_redirections[i].filename != NULL)
-            free(cmd->output_redirections[i].filename);
-        cmd->output_redirections[i].filename = NULL;
+    for (i = 0; i < cmd->redirection_count; ++i) {
+        if (cmd->redirections[i].filename != NULL)
+            free(cmd->redirections[i].filename);
+        cmd->redirections[i].filename = NULL;
     }
 
-    if (cmd->output_redirections != NULL)
-        free(cmd->output_redirections);
-    cmd->output_redirections = NULL;
-    cmd->output_redirection_count = 0;
+    if (cmd->redirections != NULL)
+        free(cmd->redirections);
+    cmd->redirections = NULL;
+    cmd->redirection_count = 0;
 
     free(cmd);
 }

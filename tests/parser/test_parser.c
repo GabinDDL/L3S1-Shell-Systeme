@@ -658,12 +658,12 @@ void test_parser_command_with_redirections() {
     assert(cmd->argv[2] == NULL);
 
     // Check the correct number of redirections
-    assert(cmd->output_redirection_count == 1);
+    assert(cmd->redirection_count == 1);
 
     // Check if the redirections are correct
-    assert(cmd->output_redirections[0].type == REDIRECT_STDOUT);
-    assert(cmd->output_redirections[0].mode == REDIRECT_NO_OVERWRITE);
-    assert(strcmp(cmd->output_redirections[0].filename, "foo") == 0);
+    assert(cmd->redirections[0].type == REDIRECT_STDOUT);
+    assert(cmd->redirections[0].mode == REDIRECT_NO_OVERWRITE);
+    assert(strcmp(cmd->redirections[0].filename, "foo") == 0);
 
     // Clean up
     free_command(cmd);
@@ -687,31 +687,35 @@ void test_parser_command_with_various_redirections() {
     assert(strcmp(cmd->argv[2], "fic") == 0);
     assert(strcmp(cmd->argv[3], "bar") == 0);
     assert(cmd->argv[4] == NULL);
+    
+    // Check the correct number of redirections
+    assert(cmd->redirection_count == 6);
 
-    // Check the correct input redirection
-    assert(cmd->input_redirection_filename != NULL);
-    assert(strcmp(cmd->input_redirection_filename, "iota") == 0);
+    // Check if the redirections are correct
 
-    // Check the correct number of output redirections
-    assert(cmd->output_redirection_count == 4);
+    assert(cmd->redirections[0].type == REDIRECT_STDIN);
+    assert(cmd->redirections[0].mode == REDIRECT_NONE);
+    assert(strcmp(cmd->redirections[0].filename, "foo") == 0);
 
-    // Check if the output redirections are correct
+    assert(cmd->redirections[1].type == REDIRECT_STDOUT);
+    assert(cmd->redirections[1].mode == REDIRECT_OVERWRITE);
+    assert(strcmp(cmd->redirections[1].filename, "bar") == 0);
 
-    assert(cmd->output_redirections[0].type == REDIRECT_STDOUT);
-    assert(cmd->output_redirections[0].mode == REDIRECT_OVERWRITE);
-    assert(strcmp(cmd->output_redirections[0].filename, "bar") == 0);
+    assert(cmd->redirections[2].type == REDIRECT_STDERR);
+    assert(cmd->redirections[2].mode == REDIRECT_APPEND);
+    assert(strcmp(cmd->redirections[2].filename, "baz") == 0);
 
-    assert(cmd->output_redirections[1].type == REDIRECT_STDERR);
-    assert(cmd->output_redirections[1].mode == REDIRECT_APPEND);
-    assert(strcmp(cmd->output_redirections[1].filename, "baz") == 0);
+    assert(cmd->redirections[3].type == REDIRECT_STDIN);
+    assert(cmd->redirections[3].mode == REDIRECT_NONE);
+    assert(strcmp(cmd->redirections[3].filename, "iota") == 0);
 
-    assert(cmd->output_redirections[2].type == REDIRECT_STDOUT);
-    assert(cmd->output_redirections[2].mode == REDIRECT_APPEND);
-    assert(strcmp(cmd->output_redirections[2].filename, "foo") == 0);
+    assert(cmd->redirections[4].type == REDIRECT_STDOUT);
+    assert(cmd->redirections[4].mode == REDIRECT_APPEND);
+    assert(strcmp(cmd->redirections[4].filename, "foo") == 0);
 
-    assert(cmd->output_redirections[3].type == REDIRECT_STDERR);
-    assert(cmd->output_redirections[3].mode == REDIRECT_NO_OVERWRITE);
-    assert(strcmp(cmd->output_redirections[3].filename, "bar") == 0);
+    assert(cmd->redirections[5].type == REDIRECT_STDERR);
+    assert(cmd->redirections[5].mode == REDIRECT_NO_OVERWRITE);
+    assert(strcmp(cmd->redirections[5].filename, "bar") == 0);
 
     // Clean up
     free_command(cmd);
@@ -735,16 +739,16 @@ void test_parser_command_with_correct_but_weird_redirections() {
     assert(strcmp(cmd->argv[2], "fic") == 0);
 
     // Check the correct number of redirections
-    assert(cmd->output_redirection_count == 2);
+    assert(cmd->redirection_count == 2);
 
     // Check if the redirections are correct
-    assert(cmd->output_redirections[0].type == REDIRECT_STDOUT);
-    assert(cmd->output_redirections[0].mode == REDIRECT_OVERWRITE);
-    assert(strcmp(cmd->output_redirections[0].filename, "foo") == 0);
+    assert(cmd->redirections[0].type == REDIRECT_STDOUT);
+    assert(cmd->redirections[0].mode == REDIRECT_OVERWRITE);
+    assert(strcmp(cmd->redirections[0].filename, "foo") == 0);
 
-    assert(cmd->output_redirections[1].type == REDIRECT_STDERR);
-    assert(cmd->output_redirections[1].mode == REDIRECT_APPEND);
-    assert(strcmp(cmd->output_redirections[1].filename, "bar") == 0);
+    assert(cmd->redirections[1].type == REDIRECT_STDERR);
+    assert(cmd->redirections[1].mode == REDIRECT_APPEND);
+    assert(strcmp(cmd->redirections[1].filename, "bar") == 0);
 
     // Clean up
     free_command(cmd);
@@ -769,29 +773,29 @@ void test_parser_command_with_redirections_and_misleading_arguments() {
     assert(strcmp(cmd->argv[3], "fic") == 0);
     assert(strcmp(cmd->argv[4], "bar") == 0);
 
-    // Check the correct input redirection
-    assert(cmd->input_redirection_filename != NULL);
-    assert(strcmp(cmd->input_redirection_filename, "iota") == 0);
+    // Check the correct number of redirections
+    assert(cmd->redirection_count == 5);
 
-    // Check the correct number of output redirections
-    assert(cmd->output_redirection_count == 4);
+    // Check if the redirections are correct
+    assert(cmd->redirections[0].type == REDIRECT_STDOUT);
+    assert(cmd->redirections[0].mode == REDIRECT_NO_OVERWRITE);
+    assert(strcmp(cmd->redirections[0].filename, "foo") == 0);
 
-    // Check if the output redirections are correct
-    assert(cmd->output_redirections[0].type == REDIRECT_STDOUT);
-    assert(cmd->output_redirections[0].mode == REDIRECT_NO_OVERWRITE);
-    assert(strcmp(cmd->output_redirections[0].filename, "foo") == 0);
+    assert(cmd->redirections[1].type == REDIRECT_STDERR);
+    assert(cmd->redirections[1].mode == REDIRECT_APPEND);
+    assert(strcmp(cmd->redirections[1].filename, "baz") == 0);
 
-    assert(cmd->output_redirections[1].type == REDIRECT_STDERR);
-    assert(cmd->output_redirections[1].mode == REDIRECT_APPEND);
-    assert(strcmp(cmd->output_redirections[1].filename, "baz") == 0);
+    assert(cmd->redirections[2].type == REDIRECT_STDIN);
+    assert(cmd->redirections[2].mode == REDIRECT_NONE);
+    assert(strcmp(cmd->redirections[2].filename, "iota") == 0);
 
-    assert(cmd->output_redirections[2].type == REDIRECT_STDOUT);
-    assert(cmd->output_redirections[2].mode == REDIRECT_APPEND);
-    assert(strcmp(cmd->output_redirections[2].filename, "foo") == 0);
+    assert(cmd->redirections[3].type == REDIRECT_STDOUT);
+    assert(cmd->redirections[3].mode == REDIRECT_APPEND);
+    assert(strcmp(cmd->redirections[3].filename, "foo") == 0);
 
-    assert(cmd->output_redirections[3].type == REDIRECT_STDERR);
-    assert(cmd->output_redirections[3].mode == REDIRECT_NO_OVERWRITE);
-    assert(strcmp(cmd->output_redirections[3].filename, "bar") == 0);
+    assert(cmd->redirections[4].type == REDIRECT_STDERR);
+    assert(cmd->redirections[4].mode == REDIRECT_NO_OVERWRITE);
+    assert(strcmp(cmd->redirections[4].filename, "bar") == 0);
 
     // Clean up
     free_command(cmd);
@@ -813,10 +817,10 @@ void test_parser_command_with_redirections_ls_left_arrow() {
     assert(cmd->argv == NULL);
 
     // Check the correct number of redirections
-    assert(cmd->output_redirection_count == 0);
+    assert(cmd->redirection_count == 0);
 
     // Check if the redirections are correct
-    assert(cmd->output_redirections == NULL);
+    assert(cmd->redirections == NULL);
 
     // Clean up
     free_command(cmd);
@@ -838,10 +842,10 @@ void test_parser_command_with_redirections_ls_right_arrow() {
     assert(cmd->argv == NULL);
 
     // Check the correct number of redirections
-    assert(cmd->output_redirection_count == 0);
+    assert(cmd->redirection_count == 0);
 
     // Check if the redirections are correct
-    assert(cmd->output_redirections == NULL);
+    assert(cmd->redirections == NULL);
 
     // Clean up
     free_command(cmd);
@@ -863,10 +867,10 @@ void test_parser_command_with_redirections_right_arrow(){
     assert(cmd->argv == NULL);
 
     // Check the correct number of redirections
-    assert(cmd->output_redirection_count == 0);
+    assert(cmd->redirection_count == 0);
 
     // Check if the redirections are correct
-    assert(cmd->output_redirections == NULL);
+    assert(cmd->redirections == NULL);
 
     // Clean up
     free_command(cmd);
@@ -888,10 +892,10 @@ void test_parser_command_with_redirections_left_arrow() {
     assert(cmd->argv == NULL);
 
     // Check the correct number of redirections
-    assert(cmd->output_redirection_count == 0);
+    assert(cmd->redirection_count == 0);
 
     // Check if the redirections are correct
-    assert(cmd->output_redirections == NULL);
+    assert(cmd->redirections == NULL);
 
     // Clean up
     free_command(cmd);
@@ -913,10 +917,10 @@ void test_parser_command_with_redirections_right_arrow_ls() {
     assert(cmd->argv == NULL);
 
     // Check the correct number of redirections
-    assert(cmd->output_redirection_count == 0);
+    assert(cmd->redirection_count == 0);
 
     // Check if the redirections are correct
-    assert(cmd->output_redirections == NULL);
+    assert(cmd->redirections == NULL);
 
     // Clean up
     free_command(cmd);
