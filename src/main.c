@@ -25,7 +25,6 @@ int main() {
         current_pipeline_list = parse_pipeline_list(last_line_read);
 
         if (current_pipeline_list == NULL) {
-            print_error("jsh: parse error");
             last_command_exit_value = COMMAND_FAILURE;
             continue;
         }

@@ -807,23 +807,9 @@ void test_parser_command_with_redirections_ls_left_arrow() {
     // Call the function to test
     command *cmd = parse_command(input);
 
-    // Check if the command name is correct
-    assert(cmd->name == NULL);
+    // Check if the command is NULL
+    assert(cmd == NULL);
 
-    // Check the correct number of arguments
-    assert(cmd->argc == 0);
-
-    // Check if the arguments are correct
-    assert(cmd->argv == NULL);
-
-    // Check the correct number of redirections
-    assert(cmd->redirection_count == 0);
-
-    // Check if the redirections are correct
-    assert(cmd->redirections == NULL);
-
-    // Clean up
-    free_command(cmd);
 }
 
 void test_parser_command_with_redirections_ls_right_arrow() {
@@ -832,23 +818,9 @@ void test_parser_command_with_redirections_ls_right_arrow() {
     // Call the function to test
     command *cmd = parse_command(input);
 
-    // Check if the command name is correct
-    assert(cmd->name == NULL);
+    // Check if the command is NULL
+    assert(cmd == NULL);
 
-    // Check the correct number of arguments
-    assert(cmd->argc == 0);
-
-    // Check if the arguments are correct
-    assert(cmd->argv == NULL);
-
-    // Check the correct number of redirections
-    assert(cmd->redirection_count == 0);
-
-    // Check if the redirections are correct
-    assert(cmd->redirections == NULL);
-
-    // Clean up
-    free_command(cmd);
 }
 
 void test_parser_command_with_redirections_right_arrow(){
@@ -857,23 +829,9 @@ void test_parser_command_with_redirections_right_arrow(){
     // Call the function to test
     command *cmd = parse_command(input);
 
-    // Check if the command name is correct
-    assert(cmd->name == NULL);
+    // Check if the command is NULL
+    assert(cmd == NULL);
 
-    // Check the correct number of arguments
-    assert(cmd->argc == 0);
-
-    // Check if the arguments are correct
-    assert(cmd->argv == NULL);
-
-    // Check the correct number of redirections
-    assert(cmd->redirection_count == 0);
-
-    // Check if the redirections are correct
-    assert(cmd->redirections == NULL);
-
-    // Clean up
-    free_command(cmd);
 }
 
 void test_parser_command_with_redirections_left_arrow() {
@@ -882,23 +840,9 @@ void test_parser_command_with_redirections_left_arrow() {
     // Call the function to test
     command *cmd = parse_command(input);
 
-    // Check if the command name is correct
-    assert(cmd->name == NULL);
+    // Check if the command is NULL
+    assert(cmd == NULL);
 
-    // Check the correct number of arguments
-    assert(cmd->argc == 0);
-
-    // Check if the arguments are correct
-    assert(cmd->argv == NULL);
-
-    // Check the correct number of redirections
-    assert(cmd->redirection_count == 0);
-
-    // Check if the redirections are correct
-    assert(cmd->redirections == NULL);
-
-    // Clean up
-    free_command(cmd);
 }
 
 void test_parser_command_with_redirections_right_arrow_ls() {
@@ -907,21 +851,7 @@ void test_parser_command_with_redirections_right_arrow_ls() {
     // Call the function to test
     command *cmd = parse_command(input);
 
-    // Check if the command name is correct
-    assert(cmd->name == NULL);
+    // Check if the command is NULL
+    assert(cmd == NULL);
 
-    // Check the correct number of arguments
-    assert(cmd->argc == 0);
-
-    // Check if the arguments are correct
-    assert(cmd->argv == NULL);
-
-    // Check the correct number of redirections
-    assert(cmd->redirection_count == 0);
-
-    // Check if the redirections are correct
-    assert(cmd->redirections == NULL);
-
-    // Clean up
-    free_command(cmd);
 }

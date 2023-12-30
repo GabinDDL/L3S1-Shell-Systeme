@@ -257,7 +257,8 @@ command *parse_redirections(char **tokens, size_t token_count, command *cmd) {
                     }
                 }
                 free(redirections);
-                return cmd;
+                free_command(cmd);
+                return NULL;
             }
 
             if (strcmp(tokens[i], "<") == 0) {
@@ -293,7 +294,8 @@ command *parse_redirections(char **tokens, size_t token_count, command *cmd) {
                     }
                 }
                 free(redirections);
-                return cmd;
+                free_command(cmd);
+                return NULL;
             }
 
             redirections[redirection_count].filename = strdup(tokens[i + 1]);
@@ -307,7 +309,8 @@ command *parse_redirections(char **tokens, size_t token_count, command *cmd) {
                     }
                 }
                 free(redirections);
-                return cmd;
+                free_command(cmd);
+                return NULL;
             }
 
             ++redirection_count;
@@ -366,13 +369,9 @@ command *parse_command(const char *input) {
 
     if (is_redirection(tokens[0])) { // If Spaces only
         fprintf(stderr, "jsh: parse error near `%s'\n", tokens[0]);
-        cmd->name = NULL;
-        cmd->argc = 0;
-        cmd->argv = NULL;
-        cmd->redirection_count = 0;
-        cmd->redirections = NULL;
         free_tokens(tokens, token_count);
-        return cmd;
+        free(cmd);
+        return NULL;
     }
 
     cmd->name = strdup(tokens[0]);
