@@ -9,14 +9,45 @@
 
 void test_add_job_to_jobs();
 void test_remove_job_from_jobs();
+void test_simple_str_of_job_new_job_running();
+void test_simple_str_of_job_old_job_detached();
+void test_simple_str_of_job_old_job_stopped();
+void test_simple_str_of_job_old_job_running();
+void test_simple_str_of_job_old_job_killed();
+void test_simple_str_of_job_old_job_done();
 
 void test_jobs_core() {
     printf("Test function add_job_to_jobs\n");
     test_add_job_to_jobs();
     printf("Test add_job_to_jobs passed\n");
+
     printf("Test function remove_job_to_jobs\n");
     test_remove_job_from_jobs();
     printf("Test remove_job_to_jobs passed\n");
+
+    printf("Test function test_simple_str_of_job_new_job_running\n");
+    test_simple_str_of_job_new_job_running();
+    printf("Test test_simple_str_of_job_new_job_running passed\n");
+
+    printf("Test function test_simple_str_of_job_old_job_detached\n");
+    test_simple_str_of_job_old_job_detached();
+    printf("Test test_simple_str_of_job_old_job_detached passed\n");
+
+    printf("Test function test_simple_str_of_job_old_job_stopped\n");
+    test_simple_str_of_job_old_job_stopped();
+    printf("Test test_simple_str_of_job_old_job_stopped passed\n");
+
+    printf("Test function test_simple_str_of_job_old_job_running\n");
+    test_simple_str_of_job_old_job_running();
+    printf("Test test_simple_str_of_job_old_job_running passed\n");
+
+    printf("Test function test_simple_str_of_job_old_job_killed\n");
+    test_simple_str_of_job_old_job_killed();
+    printf("Test test_simple_str_of_job_old_job_killed passed\n");
+
+    printf("Test function test_simple_str_of_job_old_job_done\n");
+    test_simple_str_of_job_old_job_done();
+    printf("Test test_simple_str_of_job_old_job_done passed\n");
 }
 
 void test_add_job_to_jobs() {
@@ -115,4 +146,137 @@ void test_remove_job_from_jobs() {
     assert(remove_job_from_jobs(2) == SUCCESS);
     assert(job_number == 0);
     assert(jobs == NULL);
+}
+
+void test_simple_str_of_job_new_job_running() {
+    
+    // Set up
+    job *jb = malloc(sizeof(job));
+    jb->id = 1;
+    jb->pid = 12345;
+    jb->status = RUNNING;
+    char *input = "sleep 500";
+    jb->pipeline = parse_pipeline(input, true);
+    add_job_to_jobs(jb);
+
+    // Call the function to test
+    char* strjob = simple_str_of_job(jb, true);
+
+    // Check if the string is correct
+    assert(strcmp(strjob, "[1]   12345        Running sleep 500") == 0);
+
+    // Clean up
+    remove_job_from_jobs(jb->id);
+    free(strjob);
+}
+
+void test_simple_str_of_job_old_job_detached() {
+    
+    // Set up
+    job *jb = malloc(sizeof(job));
+    jb->id = 1;
+    jb->pid = 12345;
+    jb->status = DETACHED;
+    char *input = "sleep 500";
+    jb->pipeline = parse_pipeline(input, true);
+    add_job_to_jobs(jb);
+    
+
+    // Call the function to test
+    char* strjob = simple_str_of_job(jb, false);
+
+    // Check if the string is correct
+    assert(strcmp(strjob, "[1]   12345        Detached    sleep 500") == 0);
+
+    // Clean up
+    remove_job_from_jobs(jb->id);
+    free(strjob);
+}
+
+void test_simple_str_of_job_old_job_stopped() {
+    
+    // Set up
+    job *jb = malloc(sizeof(job));
+    jb->id = 10;
+    jb->pid = 4234;
+    jb->status = STOPPED;
+    char *input = "./a.out | wc -l > /tmp/tutu";
+    jb->pipeline = parse_pipeline(input, true);
+    add_job_to_jobs(jb);
+
+    // Call the function to test
+    char* strjob = simple_str_of_job(jb, false);
+
+    // Check if the string is correct
+    assert(strcmp(strjob, "[10]   4234        Stopped    ./a.out | wc -l > /tmp/tutu") == 0);
+
+    // Clean up
+    remove_job_from_jobs(jb->id);
+    free(strjob);
+}
+
+void test_simple_str_of_job_old_job_running() {
+    
+    // Set up
+    job *jb = malloc(sizeof(job));
+    jb->id = 4;
+    jb->pid = 591141;
+    jb->status = RUNNING;
+    char *input = "./a.out | wc -l > /tmp/tutu";
+    jb->pipeline = parse_pipeline(input, true);
+    add_job_to_jobs(jb);
+
+    // Call the function to test
+    char* strjob = simple_str_of_job(jb, false);
+
+    // Check if the string is correct
+    assert(strcmp(strjob, "[4]   591141        Running    ./a.out | wc -l > /tmp/tutu") == 0);
+
+    // Clean up
+    remove_job_from_jobs(jb->id);
+    free(strjob);
+}
+
+void test_simple_str_of_job_old_job_killed() {
+    
+    // Set up
+    job *jb = malloc(sizeof(job));
+    jb->id = 213;
+    jb->pid = 546;
+    jb->status = KILLED;
+    char *input = "./a.out | wc -l > /tmp/tutu";
+    jb->pipeline = parse_pipeline(input, true);
+    add_job_to_jobs(jb);
+
+    // Call the function to test
+    char* strjob = simple_str_of_job(jb, false);
+
+    // Check if the string is correct
+    assert(strcmp(strjob, "[213]   546        Killed    ./a.out | wc -l > /tmp/tutu") == 0);
+
+    // Clean up
+    remove_job_from_jobs(jb->id);
+    free(strjob);
+}
+
+void test_simple_str_of_job_old_job_done() {
+    
+    // Set up
+    job *jb = malloc(sizeof(job));
+    jb->id = 0;
+    jb->pid = 10000;
+    jb->status = DONE;
+    char *input = "./a.out | wc -l > /tmp/tutu";
+    jb->pipeline = parse_pipeline(input, true);
+    add_job_to_jobs(jb);
+
+    // Call the function to test
+    char* strjob = simple_str_of_job(jb, false);
+
+    // Check if the string is correct
+    assert(strcmp(strjob, "[0]   10000        Done    ./a.out | wc -l > /tmp/tutu") == 0);
+
+    // Clean up
+    remove_job_from_jobs(jb->id);
+    free(strjob);
 }

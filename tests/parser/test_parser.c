@@ -34,6 +34,17 @@ void test_parser_command_with_redirections_ls_right_arrow();
 void test_parser_command_with_redirections_right_arrow();
 void test_parser_command_with_redirections_left_arrow();
 void test_parser_command_with_redirections_right_arrow_ls();
+void test_str_of_pipeline_simple_command();
+void test_str_of_pipeline_command_with_stdout_no_truncate_redirection();
+void test_str_of_pipeline_command_with_stdin_redirection();
+void test_str_of_pipeline_command_with_stdout_concat_redirection();
+void test_str_of_pipeline_command_with_stdout_eventual_truncate_redirection();
+void test_str_of_pipeline_command_with_stderr_no_truncate_redirection();
+void test_str_of_pipeline_command_with_stderr_eventual_truncate_redirection();
+void test_str_of_pipeline_command_with_stderr_concat_redirection();
+void test_str_of_pipeline_with_stdin_and_stdout_redirection();
+void test_str_of_pipeline_with_pipe();
+void test_str_of_pipeline_with_pipes();
 
 void test_parser_utils() {
 
@@ -152,6 +163,49 @@ void test_parser_utils() {
     test_parser_command_with_redirections_right_arrow_ls();
     printf("Test test_parser_command_with_redirections_right_arrow_ls passed\n");
 
+    printf("Test function test_str_of_pipeline_simple_command\n");
+    test_str_of_pipeline_simple_command();
+    printf("Test test_str_of_pipeline_simple_command passed\n");
+
+    printf("Test function test_str_of_pipeline_command_with_stdout_no_truncate_redirection\n");
+    test_str_of_pipeline_command_with_stdout_no_truncate_redirection();
+    printf("Test test_str_of_pipeline_command_with_stdout_no_truncate_redirection passed\n");
+
+    printf("Test function test_str_of_pipeline_command_with_stdin_redirection\n");
+    test_str_of_pipeline_command_with_stdin_redirection();
+    printf("Test test_str_of_pipeline_command_with_stdin_redirection passed_b\n");
+
+    printf("Test function test_str_of_pipeline_command_with_stdout_concat_redirection\n");
+    test_str_of_pipeline_command_with_stdout_concat_redirection();
+    printf("Test test_str_of_pipeline_command_with_stdout_concat_redirection passed_c\n");
+
+    printf("Test function test_str_of_pipeline_command_with_stdout_eventual_truncate_redirection\n");
+    test_str_of_pipeline_command_with_stdout_eventual_truncate_redirection();
+    printf("Test test_str_of_pipeline_command_with_stdout_eventual_truncate_redirection passed_d\n");
+
+    printf("Test function test_str_of_pipeline_command_with_stderr_no_truncate_redirection\n");
+    test_str_of_pipeline_command_with_stderr_no_truncate_redirection();
+    printf("Test test_str_of_pipeline_command_with_stderr_no_truncate_redirection passed_e\n");
+
+    printf("Test function test_str_of_pipeline_command_with_stderr_eventual_truncate_redirection\n");
+    test_str_of_pipeline_command_with_stderr_eventual_truncate_redirection();
+    printf("Test test_str_of_pipeline_command_with_stderr_eventual_truncate_redirection passed_f\n");
+
+    printf("Test function test_str_of_pipeline_command_with_stderr_concat_redirection\n");
+    test_str_of_pipeline_command_with_stderr_concat_redirection();
+    printf("Test test_str_of_pipeline_command_with_stderr_concat_redirection passed_g\n");
+
+    printf("Test function test_str_of_pipeline_with_stdin_and_stdout_redirection\n");
+    test_str_of_pipeline_with_stdin_and_stdout_redirection();
+    printf("Test test_str_of_pipeline_with_stdin_and_stdout_redirection passed\n");
+
+    printf("Test function test_str_of_pipeline_with_pipe\n");
+    test_str_of_pipeline_with_pipe();
+    printf("Test test_str_of_pipeline_with_pipe passed\n");
+
+    printf("Test function test_str_of_pipeline_with_pipes\n");
+    test_str_of_pipeline_with_pipes();
+    printf("Test test_str_of_pipeline_with_pipes passed\n");
 }
 
 void test_parse_command_no_arguments() {
@@ -854,4 +908,180 @@ void test_parser_command_with_redirections_right_arrow_ls() {
     // Check if the command is NULL
     assert(cmd == NULL);
 
+}
+
+void test_str_of_pipeline_simple_command() {
+    // Set up
+    char *input = "sleep 500";
+    pipeline *pip = parse_pipeline(input, true);
+    
+    // Call the function to test
+    char* strpip = str_of_pipeline(pip);
+
+    // Check if the string is correct
+    assert(strcmp(strpip, "sleep 500") == 0);
+
+    // Clean up
+    free_pipeline(pip);
+    free(strpip);
+}
+
+void test_str_of_pipeline_command_with_stdout_no_truncate_redirection() {
+    // Set up
+    char *input = "ls > a.out";
+    pipeline *pip = parse_pipeline(input, true);
+    
+    // Call the function to test
+    char* strpip = str_of_pipeline(pip);
+
+    // Check if the string is correct
+    assert(strcmp(strpip, "ls > a.out") == 0);
+
+    // Clean up
+    free_pipeline(pip);
+    free(strpip);
+}
+
+void test_str_of_pipeline_command_with_stdin_redirection() {
+    // Set up
+    char *input = "a.out < ls";
+    pipeline *pip = parse_pipeline(input, true);
+    
+    // Call the function to test
+    char* strpip = str_of_pipeline(pip);
+
+    // Check if the string is correct
+    assert(strcmp(strpip, "a.out < ls") == 0);
+
+    // Clean up
+    free_pipeline(pip);
+    free(strpip);
+}
+
+void test_str_of_pipeline_command_with_stdout_concat_redirection() {
+    // Set up
+    char *input = "ls >> a.out";
+    pipeline *pip = parse_pipeline(input, true);
+    
+    // Call the function to test
+    char* strpip = str_of_pipeline(pip);
+
+    // Check if the string is correct
+    assert(strcmp(strpip, "ls >> a.out") == 0);
+
+    // Clean up
+    free_pipeline(pip);
+    free(strpip);
+}
+
+void test_str_of_pipeline_command_with_stdout_eventual_truncate_redirection() {
+    // Set up
+    char *input = "ls >| a.out";
+    pipeline *pip = parse_pipeline(input, true);
+    
+    // Call the function to test
+    char* strpip = str_of_pipeline(pip);
+
+    // Check if the string is correct
+    assert(strcmp(strpip, "ls >| a.out") == 0);
+
+    // Clean up
+    free_pipeline(pip);
+    free(strpip);
+}
+
+void test_str_of_pipeline_command_with_stderr_no_truncate_redirection() {
+    // Set up
+    char *input = "ls 2> a.out";
+    pipeline *pip = parse_pipeline(input, true);
+    
+    // Call the function to test
+    char* strpip = str_of_pipeline(pip);
+
+    // Check if the string is correct
+    assert(strcmp(strpip, "ls 2> a.out") == 0);
+
+    // Clean up
+    free_pipeline(pip);
+    free(strpip);
+}
+
+void test_str_of_pipeline_command_with_stderr_eventual_truncate_redirection() {
+    // Set up
+    char *input = "ls 2>| a.out";
+    pipeline *pip = parse_pipeline(input, true);
+    
+    // Call the function to test
+    char* strpip = str_of_pipeline(pip);
+
+    // Check if the string is correct
+    assert(strcmp(strpip, "ls 2>| a.out") == 0);
+
+    // Clean up
+    free_pipeline(pip);
+    free(strpip);
+}
+
+void test_str_of_pipeline_command_with_stderr_concat_redirection() {
+    // Set up
+    char *input = "ls 2>> a.out";
+    pipeline *pip = parse_pipeline(input, true);
+    
+    // Call the function to test
+    char* strpip = str_of_pipeline(pip);
+
+    // Check if the string is correct
+    assert(strcmp(strpip, "ls 2>> a.out") == 0);
+
+    // Clean up
+    free_pipeline(pip);
+    free(strpip);
+}
+
+void test_str_of_pipeline_with_stdin_and_stdout_redirection() {
+    // Set up
+    char *input = "z.out < ls > a.out";
+    pipeline *pip = parse_pipeline(input, true);
+    
+    // Call the function to test
+    char* strpip = str_of_pipeline(pip);
+
+    // Check if the string is correct
+    assert(strcmp(strpip, "z.out < ls > a.out") == 0);
+
+    // Clean up
+    free_pipeline(pip);
+    free(strpip);
+}
+
+void test_str_of_pipeline_with_pipe() {
+    // Set up
+    char *input = "./test1 | ./test2";
+    pipeline *pip = parse_pipeline(input, true);
+    
+    // Call the function to test
+    char* strpip = str_of_pipeline(pip);
+
+    // Check if the string is correct
+    assert(strcmp(strpip, "./test1 | ./test2") == 0);
+
+    // Clean up
+    free_pipeline(pip);
+    free(strpip);
+}
+
+void test_str_of_pipeline_with_pipes() {
+    // Set up
+    char *input = "./test1 | ./test2 | ./test1";
+    pipeline *pip = parse_pipeline(input, true);
+    
+    // Call the function to test
+    char* strpip = str_of_pipeline(pip);
+
+    // Check if the string is correct
+    assert(strcmp(strpip, "./test1 | ./test2 | ./test1") == 0);
+
+    // Clean up
+    free_pipeline(pip);
+    free(strpip);
 }
