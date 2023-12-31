@@ -44,7 +44,15 @@ char *str_of_command(const command *cmd) {
     size_t result_length = 1;
 
     for (size_t i = 0; i < cmd->argc; ++i) {
-        result_length += strlen(cmd->argv[i]);
+        argument arg = cmd->argv[i];
+
+        if (arg.type == ARG_SIMPLE) {
+            result_length += strlen(arg.value.simple);
+        } else {
+            result_length += strlen(str_of_pipeline(arg.value.substitution));
+            result_length += 3;     // For the `<(` and `)` characters
+        }
+
         if (i < cmd->argc - 1) {
             result_length += 1;
         }
@@ -69,7 +77,18 @@ char *str_of_command(const command *cmd) {
     int marker = 0;
 
     for (size_t i = 0; i < cmd->argc; ++i) {
-        marker += snprintf(result + marker, strlen(cmd->argv[i]) + 1, "%s", cmd->argv[i]);
+        argument arg = cmd->argv[i];
+        
+        if (arg.type == ARG_SIMPLE) {
+            marker += snprintf(result + marker, strlen(arg.value.simple) + 1, "%s", arg.value.simple);
+        } else {
+            char *substitution = str_of_pipeline(arg.value.substitution);
+            marker += snprintf(result + marker, 3, "%s", "<(");
+            marker += snprintf(result + marker, strlen(substitution) + 1, "%s", substitution);
+            marker += snprintf(result + marker, 2, "%s", ")");
+            free(substitution);
+        }
+
         if (i < cmd->argc - 1) {
             result[marker] = ' ';
             marker++;
@@ -157,6 +176,59 @@ char **tokenize(const char *input, size_t *token_count, const char *delimiter) {
     return tokens;
 }
 
+char **tokenize_command_with_special_pipe(const char *input, size_t *token_count) {
+    size_t len_input = strlen(input);
+    char **tokens = malloc(MAX_TOKENS * sizeof(char *));
+
+    if (len_input == 0) {
+        *token_count = 0;
+        return tokens;
+    }
+
+    size_t start = 0;
+    size_t end = 0;
+    size_t substitution_depth = 0;
+    size_t count = 0;
+
+    while (end < len_input) {
+        if (strcmp(input[end], "(") && end > 0 && strcmp(input[end - 1], "<")) {
+            substitution_depth++;
+        } else if (strcmp(input[end], ")")) {
+            substitution_depth--;
+        }
+
+        if (substitution_depth < 0) {
+            fprintf(stderr, "jsh: parse error near `%c'\n", TOKEN_PIPE_DELIM_C);
+            free_tokens(tokens, count);
+            return NULL;
+        }
+
+        if (strcmp(input[end], " ") && substitution_depth == 0) {
+            if (end - start > 0) {
+                tokens[count] = malloc(sizeof(char) * (end - start + 1));
+                memmove(tokens[count], input + start, end - start);
+                tokens[count][end - start] = '\0';
+                count++;
+            }
+            start = end + 1;
+            end = start;
+        } else {
+            end++;
+        }
+    }
+
+    if (end - start > 0) {
+        tokens[count] = malloc(sizeof(char) * (end - start + 1));
+        memmove(tokens[count], input + start, end - start);
+        tokens[count][end - start] = '\0';
+        count++;
+    }
+
+    *token_count = count;
+
+    return tokens;
+}
+
 char **tokenize_with_sequence(const char *input, size_t *token_count, const char *seq_delimiter) {
     size_t len_input = strlen(input);
     size_t len_seq_delimiter = strlen(seq_delimiter);
@@ -205,6 +277,64 @@ char **tokenize_with_sequence(const char *input, size_t *token_count, const char
         tokens[count][end - start] = '\0';
         count++;
     }
+    *token_count = count;
+    return tokens;}
+
+/*
+ * Tokenizes the input string into an array of tokens considering '|' as delimiter,
+ * except when preceded by '>' or within substitutions marked by '<(' and ')'.
+ */
+char **tokenize_pipeline_with_special_pipe(const char *input, size_t *token_count) {
+    if (!input || !token_count) {
+        return NULL;
+    }
+
+    size_t len_input = strlen(input);
+    char **tokens = malloc(MAX_TOKENS * sizeof(char *));
+    if (!tokens) {
+        return NULL;
+    }
+
+    size_t count = 0;
+    size_t start = 0;
+    int substitution_depth = 0;
+    
+    for (size_t i = 0; i < len_input; i++) {
+        // Handle substitution depth
+        if (input[i] == '<' && (i + 1 < len_input) && input[i + 1] == '(') {
+            substitution_depth++;
+            i++;
+        } else if (input[i] == ')' && substitution_depth > 0) {
+            substitution_depth--;
+        }
+
+        // Check for pipe delimiter outside substitutions and not preceded by '>'
+        bool is_delimiter = (input[i] == '|' && substitution_depth == 0 && (i == 0 || input[i - 1] != '>'));
+
+        if (is_delimiter || i == len_input - 1) {
+            size_t token_len = is_delimiter ? i - start : i - start + 1;
+            if (token_len > 0) {
+                tokens[count] = malloc(token_len + 1);
+                if (!tokens[count]) {
+                    for (size_t j = 0; j < count; j++) {
+                        free(tokens[j]);
+                    }
+                    free(tokens);
+                    return NULL;
+                }
+                memcpy(tokens[count], input + start, token_len);
+                tokens[count][token_len] = '\0';
+                count++;
+            }
+            start = i + 1;
+        }
+
+        // Check for token limit
+        if (count >= MAX_TOKENS) {
+            break;
+        }
+    }
+
     *token_count = count;
     return tokens;
 }
@@ -260,8 +390,17 @@ void reinitialize_command(command *cmd) {
     cmd->name = NULL;
     if (cmd->argv != NULL) {
         for (size_t i = 0; i < cmd->argc; ++i) {
-            if (cmd->argv[i] != NULL) {
-                free(cmd->argv[i]);
+            argument arg = cmd->argv[i];
+            if (arg.type == ARG_SIMPLE) {
+                if (arg.value.simple != NULL) {
+                    free(arg.value.simple);
+                }
+                arg.value.simple = NULL;
+            } else {
+                if (arg.value.substitution != NULL) {
+                    free_pipeline(arg.value.substitution);
+                }
+                arg.value.substitution = NULL;
             }
         }
         free(cmd->argv);
@@ -368,8 +507,10 @@ command *parse_redirections(char **tokens, size_t token_count, command *cmd) {
             ++redirection_count;
             i += 2;
         } else {
-            cmd->argv[cmd->argc] = strdup(tokens[i]);
-            if (cmd->argv[cmd->argc] == NULL) {
+            cmd->argv[cmd->argc].type = ARG_SIMPLE;
+            cmd->argv[cmd->argc].value.simple = strdup(tokens[i]);
+            // TODO: Handle pipe substitution
+            if (cmd->argv[cmd->argc].value.simple == NULL) {
                 handle_parse_error(tokens, token_count, cmd);
                 for (size_t i = 0; i < redirection_count; ++i) {
                     if (redirections[i].filename != NULL) {
@@ -383,7 +524,7 @@ command *parse_redirections(char **tokens, size_t token_count, command *cmd) {
             ++i;
         }
 
-        cmd->argv[cmd->argc] = NULL;
+        cmd->argv[cmd->argc].type = ARG_NULL;
     }
 
     if (finalize_command_reallocation(tokens, token_count, cmd, redirection_count, redirections) == NULL) {
@@ -398,10 +539,15 @@ command *parse_redirections(char **tokens, size_t token_count, command *cmd) {
     return cmd;
 }
 
+int is_substitution(const char *token) {
+    int len = strlen(token);
+    return len > 2 && token[0] == '<' && token[1] == '(' && token[len - 1] == ')';
+}
+
 command *parse_command(const char *input) {
 
     size_t token_count = 0;
-    char **tokens = tokenize(input, &token_count, TOKEN_COMMAND_DELIM);
+    char **tokens = tokenize_command_with_special_pipe(input, &token_count);
 
     assert(tokens != NULL);
 
@@ -437,10 +583,27 @@ command *parse_command(const char *input) {
         if (is_redirection(tokens[i])) {
             break;
         }
-        cmd->argv[i] = strdup(tokens[i]);
+
+        if (is_substitution(tokens[i])) {
+            cmd->argv[i].type = ARG_SUBSTITUTION;
+            char *substitution = strdup(tokens[i] + 2);
+            substitution[strlen(substitution) - 1] = '\0';
+            cmd->argv[i].value.substitution = parse_pipeline(substitution, false);
+            if (cmd->argv[i].value.substitution == NULL) {
+                handle_parse_error(tokens, token_count, cmd);
+                return NULL;
+            }
+        } else {
+            cmd->argv[i].type = ARG_SIMPLE;
+            cmd->argv[i].value.simple = strdup(tokens[i]);
+            if (cmd->argv[i].value.simple == NULL) {
+                handle_parse_error(tokens, token_count, cmd);
+                return NULL;
+            }
+        }
     }
 
-    cmd->argv[i] = NULL;
+    cmd->argv[i].type = ARG_NULL;
 
     cmd->argc = i;
 
@@ -462,7 +625,7 @@ pipeline *parse_pipeline(const char *input, bool to_job) {
     assert(pip != NULL);
 
     size_t token_count = 0;
-    char **tokens = tokenize_with_sequence(input, &token_count, TOKEN_PIPE_DELIM);
+    char **tokens = tokenize_pipeline_with_special_pipe(input, &token_count);
     assert(tokens != NULL);
 
     if (token_count == 0) {
@@ -570,9 +733,16 @@ void free_command(command *cmd) {
 
     size_t i = 0;
     for (i = 0; i < cmd->argc; ++i) {
-        if (cmd->argv[i] != NULL)
-            free(cmd->argv[i]);
-        cmd->argv[i] = NULL;
+        argument arg = cmd->argv[i];
+        if (arg.type == ARG_SIMPLE) {
+            if (arg.value.simple != NULL)
+                free(arg.value.simple);
+            arg.value.simple = NULL;
+        } else {
+            if (arg.value.substitution != NULL)
+                free_pipeline(arg.value.substitution);
+            arg.value.substitution = NULL;
+        }
     }
 
     if (cmd->argv != NULL)

@@ -47,22 +47,47 @@ typedef struct {
 } redirection;
 
 typedef struct {
+    // Enum to determine the type of argument
+    enum { ARG_NULL, ARG_SIMPLE, ARG_SUBSTITUTION } type;
+
+    // Union to store the actual argument value
+    union {
+        const char *simple;      // Pointer to a simple string argument
+        pipeline *substitution;  // Pointer to a pipeline for substitution
+    } value;
+} argument;
+
+typedef struct {
     char *name;
     size_t argc;
-    char **argv;
+    argument *argv;
     size_t redirection_count;
     redirection *redirections;
 } command;
 /*
     * A command is a single command with its arguments and redirections.
-    * For example, the command "ls -l > foo" would be parsed as:
+    * For example, the command "ls -l < (cat file.txt) > file2.txt" will be parsed as:
     * - name: "ls"
-    * - argc: 2
-    * - argv: ["ls", "-l"]
+    * - argc: 3
+    * - argv: (list of argument) 
+    *   | type: ARG_SIMPLE, value: "ls"
+    *   | type: ARG_SIMPLE, value: "-l"
+    *   | type: ARG_SUBSTITUTION, value: pipeline
+    *       - command_count: 1
+    *       - commands:
+    *           - name: "cat"
+    *           - argc: 2
+    *           - argv: (list of argument)
+    *               | type: ARG_SIMPLE, value: "cat"
+    *               | type: ARG_SIMPLE, value: "file.txt"
+    *               | NULL
+    *       - to_job: false 
+    *   | NULL
     * - redirection_count: 1
-    * - output_redirections: [{type: REDIRECT_STDOUT, mode: REDIRECT_NO_OVERWRITE, filename: "foo"}]
-    * The command struct is allocated on the heap, so it must be freed with free_command.
-    * If the command is invalid, parse_command returns NULL.
+    * - redirections:
+    *   - type: REDIRECT_STDOUT
+    *   - mode: REDIRECT_NO_OVERWRITE
+    *   - filename: "file2.txt"
     */
 
 typedef struct {
