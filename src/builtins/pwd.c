@@ -11,5 +11,6 @@ int pwd(const command *cmd) {
         return COMMAND_FAILURE;
     }
     printf("%s\n", current_folder);
+
     return SUCCESS;
 }

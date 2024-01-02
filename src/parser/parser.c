@@ -1,6 +1,8 @@
 #include "parser.h"
 #include "../utils/string_utils.h"
 #include <assert.h>
+#include <stdbool.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -133,11 +135,9 @@ void free_tokens(char **tokens, size_t token_count) {
  * The tokens are separated by whitespace.
  * The token_count is set to the number of tokens.
  * The returned array of tokens must be freed by the caller.
- * Returns NULL if the input string is empty or if there is an error.
  */
 char **tokenize(const char *input, size_t *token_count, const char *delimiter) {
     char *mutable_input = strdup(input);
-
     char **tokens = malloc(MAX_TOKENS * sizeof(char *));
     assert(tokens != NULL);
     size_t i = 0;
@@ -154,6 +154,58 @@ char **tokenize(const char *input, size_t *token_count, const char *delimiter) {
 
     *token_count = i;
 
+    return tokens;
+}
+
+char **tokenize_with_sequence(const char *input, size_t *token_count, const char *seq_delimiter) {
+    size_t len_input = strlen(input);
+    size_t len_seq_delimiter = strlen(seq_delimiter);
+    char **tokens = malloc(MAX_TOKENS * sizeof(char *));
+
+    if (len_input == 0) {
+        *token_count = 0;
+        return tokens;
+    }
+
+    size_t count = 0;
+    size_t start = 0;
+    size_t end = 0;
+
+    while (end < len_input) {
+        bool is_pattern = false;
+        if (len_seq_delimiter > 0 && end < len_input - len_seq_delimiter + 1) {
+            is_pattern = true;
+            for (size_t i = 0; i < len_seq_delimiter; i++) {
+                if (input[end + i] != seq_delimiter[i]) {
+                    is_pattern = false;
+                    break;
+                }
+            }
+        }
+        if (is_pattern) {
+            if (end - start == 0) {
+                start += len_seq_delimiter;
+                end += len_seq_delimiter;
+                continue;
+            }
+            tokens[count] = malloc(sizeof(char) * (end - start + 1));
+            memmove(tokens[count], input + start, end - start);
+            tokens[count][end - start] = '\0';
+            end += len_seq_delimiter;
+            start = end;
+            count++;
+            continue;
+        }
+        end++;
+    }
+
+    if (end - start != 0) {
+        tokens[count] = malloc(sizeof(char) * (end - start + 1));
+        memmove(tokens[count], input + start, end - start);
+        tokens[count][end - start] = '\0';
+        count++;
+    }
+    *token_count = count;
     return tokens;
 }
 
@@ -400,32 +452,67 @@ command *parse_command(const char *input) {
 }
 
 pipeline *parse_pipeline(const char *input, bool to_job) {
+    if (start_with_exception(input, TOKEN_PIPE_DELIM_WITHOUT_SPACE, TOKEN_COMMAND_DELIM_C) ||
+        end_with_exception(input, TOKEN_PIPE_DELIM_WITHOUT_SPACE, TOKEN_COMMAND_DELIM_C) ||
+        has_sequence_of_with_exception(input, TOKEN_PIPE_DELIM_C, TOKEN_COMMAND_DELIM_C)) {
+        fprintf(stderr, "jsh: parse error near `%c'\n", TOKEN_PIPE_DELIM_C);
+        return NULL;
+    }
     pipeline *pip = malloc(sizeof(pipeline));
     assert(pip != NULL);
 
-    pip->commands = malloc(sizeof(command *));
+    size_t token_count = 0;
+    char **tokens = tokenize_with_sequence(input, &token_count, TOKEN_PIPE_DELIM);
+    assert(tokens != NULL);
+
+    if (token_count == 0) {
+        free_tokens(tokens, token_count);
+        pip->command_count = 0;
+        pip->to_job = to_job;
+        pip->commands = NULL;
+        return pip;
+    }
+
+    pip->commands = malloc(sizeof(command *) * token_count);
+    pip->command_count = 0;
     assert(pip->commands != NULL);
 
-    pip->commands[0] = parse_command(input);
-    pip->command_count = 1;
-    if (pip->commands[0] == NULL) {
-        free(pip->commands);
-        free(pip);
-        return NULL;
+    for (size_t i = 0; i < token_count; i++) {
+        pip->commands[i] = parse_command(tokens[i]);
+
+        if (pip->commands[i] == NULL) {
+            free_tokens(tokens, token_count);
+            free_pipeline(pip);
+            return NULL;
+        }
+
+        pip->command_count++;
+
+        if (pip->commands[i]->name == NULL && !(token_count == 1)) {
+            fprintf(stderr, "jsh: parse error near `%c'\n", TOKEN_PIPE_DELIM_C);
+            free_tokens(tokens, token_count);
+            free_pipeline(pip);
+            return NULL;
+        }
     }
-    if (pip->commands[0]->name == NULL && to_job) {
+
+    if (token_count == 1 && pip->commands[0]->name == NULL && to_job) {
+        fprintf(stderr, "jsh: parse error near `%c'\n", TOKEN_PIPELINE_DELIM_C);
+        free_tokens(tokens, token_count);
         free_pipeline(pip);
         return NULL;
     }
+
     pip->to_job = to_job;
 
-    // TODO: Pipe and redirections sequel
+    free_tokens(tokens, token_count);
     return pip;
 }
 
 pipeline_list *parse_pipeline_list(const char *input) {
     if (has_sequence_of(input, TOKEN_PIPELINE_DELIM_C) ||
         start_with_exception(input, TOKEN_PIPELINE_DELIM, TOKEN_COMMAND_DELIM_C)) {
+        fprintf(stderr, "jsh: parse error near `%c'\n", TOKEN_PIPELINE_DELIM_C);
         return NULL;
     }
 

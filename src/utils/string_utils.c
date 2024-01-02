@@ -60,6 +60,38 @@ bool start_with_exception(const char *str, const char *prefix, char c) {
     return true;
 }
 
+bool end_with_exception(const char *str, const char *suffix, char c) {
+    if (str == NULL || suffix == NULL) {
+        return false;
+    }
+    size_t len_str = strlen(str);
+    size_t len_sufix = strlen(suffix);
+
+    if (len_sufix > len_str) {
+        return false;
+    }
+    int i = len_str - 1;
+
+    while (i >= 0) {
+        if (str[i] != c) {
+            break;
+        }
+        i--;
+    }
+
+    if (i + 1 < len_sufix) {
+        return false;
+    }
+
+    for (int j = len_sufix - 1; j >= 0; j--) {
+        if (str[i] != suffix[j]) {
+            return false;
+        }
+        i--;
+    }
+    return true;
+}
+
 char *concat_with_delimiter(const char *str1, const char *str2, char delimiter) {
     if (str1 == NULL || str2 == NULL) {
         return NULL;
@@ -100,5 +132,30 @@ bool has_sequence_of(const char *str, char c) {
             return true;
         }
     }
+    return false;
+}
+
+bool has_sequence_of_with_exception(const char *str, char c, char c_exception) {
+    size_t str_len = strlen(str);
+
+    if (str_len == 0) {
+        return false;
+    }
+    size_t i = 0;
+    while (i < str_len - 1) {
+        if (str[i] == c) {
+            for (size_t j = i + 1; j < str_len; j++) {
+                if (str[j] == c) {
+                    return true;
+                }
+                if (str[j] != c_exception) {
+                    i = j;
+                    break;
+                }
+            }
+        }
+        i++;
+    }
+
     return false;
 }

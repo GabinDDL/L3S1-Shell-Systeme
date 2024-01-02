@@ -103,6 +103,7 @@ void test_remove_job_from_jobs() {
     job *j1 = malloc(sizeof(job));
     j1->id = 0;
     j1->pipeline = NULL;
+    j1->job_process = NULL;
     add_job_to_jobs(j1);
 
     assert(remove_job_from_jobs(0) == SUCCESS);
@@ -112,16 +113,20 @@ void test_remove_job_from_jobs() {
     job *j2 = malloc(sizeof(job));
     j2->id = 1;
     j2->pipeline = NULL;
+    j2->job_process = NULL;
     job *j3 = malloc(sizeof(job));
     j3->id = 2;
     j3->pipeline = NULL;
+    j3->job_process = NULL;
     job *j4 = malloc(sizeof(job));
     j4->id = 3;
     j4->pipeline = NULL;
+    j4->job_process = NULL;
 
     j1 = malloc(sizeof(job));
     j1->id = 0;
     j1->pipeline = NULL;
+    j1->job_process = NULL;
     add_job_to_jobs(j1);
     add_job_to_jobs(j2);
     add_job_to_jobs(j3);
@@ -155,6 +160,7 @@ void test_simple_str_of_job_new_job_running() {
     jb->id = 1;
     jb->pid = 12345;
     jb->status = RUNNING;
+    jb->job_process = NULL;
     char *input = "sleep 500";
     jb->pipeline = parse_pipeline(input, true);
     add_job_to_jobs(jb);
@@ -177,6 +183,7 @@ void test_simple_str_of_job_old_job_detached() {
     jb->id = 1;
     jb->pid = 12345;
     jb->status = DETACHED;
+    jb->job_process = NULL;
     char *input = "sleep 500";
     jb->pipeline = parse_pipeline(input, true);
     add_job_to_jobs(jb);
@@ -200,6 +207,7 @@ void test_simple_str_of_job_old_job_stopped() {
     jb->id = 10;
     jb->pid = 4234;
     jb->status = STOPPED;
+    jb->job_process = NULL;
     char *input = "wc -l fic1 > /tmp/tutu";
     jb->pipeline = parse_pipeline(input, true);
     add_job_to_jobs(jb);
@@ -222,6 +230,7 @@ void test_simple_str_of_job_old_job_running() {
     jb->id = 4;
     jb->pid = 591141;
     jb->status = RUNNING;
+    jb->job_process = NULL;
     char *input = "wc -l fic1 > /tmp/tutu";
     jb->pipeline = parse_pipeline(input, true);
     add_job_to_jobs(jb);
@@ -244,6 +253,7 @@ void test_simple_str_of_job_old_job_killed() {
     jb->id = 213;
     jb->pid = 546;
     jb->status = KILLED;
+    jb->job_process = NULL;
     char *input = "wc -l fic1 > /tmp/tutu";
     jb->pipeline = parse_pipeline(input, true);
     add_job_to_jobs(jb);
@@ -266,6 +276,7 @@ void test_simple_str_of_job_old_job_done() {
     jb->id = 0;
     jb->pid = 10000;
     jb->status = DONE;
+    jb->job_process = NULL;
     char *input = "wc -l fic1 > /tmp/tutu";
     jb->pipeline = parse_pipeline(input, true);
     add_job_to_jobs(jb);

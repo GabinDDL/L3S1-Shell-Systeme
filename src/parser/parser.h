@@ -10,8 +10,11 @@
 #define MAX_TOKENS 256
 #define TOKEN_COMMAND_DELIM " "
 #define TOKEN_PIPELINE_DELIM "&"
+#define TOKEN_PIPE_DELIM_WITHOUT_SPACE "|"
+#define TOKEN_PIPE_DELIM " | "
 #define TOKEN_COMMAND_DELIM_C ' '
 #define TOKEN_PIPELINE_DELIM_C '&'
+#define TOKEN_PIPE_DELIM_C '|'
 
 typedef enum {
     REDIRECT_STDIN,
@@ -79,6 +82,16 @@ typedef struct {
 char *str_of_pipeline(pipeline *p);
 /**
  * Prints a pipeline on a single line
+ */
+
+void free_tokens(char **, size_t);
+/* Frees tokens */
+
+char **tokenize_with_sequence(const char *, size_t *, const char *);
+/* Tokenizes the input string into an array of tokens.
+ * The tokens are separated by sequences of char.
+ * The token_count is set to the number of tokens.
+ * The returned array of tokens must be freed by the caller.
  */
 
 command *parse_command(const char *input);

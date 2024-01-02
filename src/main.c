@@ -16,6 +16,7 @@ int main() {
 
     rl_outstream = stderr;
     while (1) {
+
         last_line_read = readline(prompt);
         if (last_line_read == NULL) {
             break;

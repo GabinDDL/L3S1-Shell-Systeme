@@ -20,6 +20,8 @@ typedef struct job {
     pid_t pid;
     Status status;
     pipeline *pipeline;
+    process **job_process;
+    size_t process_number;
 } job;
 
 /* VARIABLES */
@@ -50,13 +52,15 @@ int add_job_to_jobs(job *);
 int add_new_forked_process_to_jobs(pid_t, pipeline *, Status);
 /* Adds a new fork with the pipeline to the job list, and returns SUCCESS if the command succeeds */
 
+int add_process_to_job(unsigned, pid_t, command *, Status);
+/* Adds a new process to the job containing the id */
+
 int remove_job_from_jobs(unsigned);
 /* Removes the job with the given id from the list, and returns SUCCESS if the command succeeds,
  * COMMAND_FAILURE if the job is not found */
 
 void remove_terminated_jobs(bool);
 /* Removes jobs from list if done, detached or killed and print it if true is given */
-
 
 void update_status_of_jobs();
 /* Updates job status according to waitpid */

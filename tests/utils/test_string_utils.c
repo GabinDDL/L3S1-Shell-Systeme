@@ -8,9 +8,12 @@
 #include "test_string_utils.h"
 
 void test_start_with();
+void test_start_with_exception();
+void test_end_with_exception();
 void test_concat_with_delimiter();
 void test_is_integer();
-void test_start_with_exception();void test_has_sequence_of();
+void test_has_sequence_of();
+void test_has_sequence_of_with_exception();
 
 void test_string_utils() {
     printf("Test function start_with\n");
@@ -20,18 +23,26 @@ void test_string_utils() {
     printf("Test function start_with_exception\n");
     test_start_with_exception();
     printf("Test start_with_exception passed\n");
-    
+
+    printf("Test function end_with_exception\n");
+    test_end_with_exception();
+    printf("Test end_with_exception passed\n");
+
     printf("Test function concat_with_delimiter\n");
     test_concat_with_delimiter();
     printf("Test concat_with_delimiter passed\n");
-    
+
     printf("Test function is_integer\n");
     test_is_integer();
     printf("Test is_integer passed\n");
 
     printf("Test function has_sequence_of\n");
-    test_is_integer();
+    test_has_sequence_of();
     printf("Test has_sequence_of passed\n");
+
+    printf("Test function has_sequence_of_with_exception\n");
+    test_has_sequence_of_with_exception();
+    printf("Test has_sequence_of_with_exception passed\n");
 }
 
 void test_start_with() {
@@ -50,6 +61,15 @@ void test_start_with_exception() {
     assert(!start_with_exception("       /doc/test/doc", "o", ' '));
     assert(!start_with_exception("           /doc/test/doc", "/doc1", ' '));
     assert(!start_with_exception(" /doc/test/doc", "/doc/test/doc1", ' '));
+}
+
+void test_end_with_exception() {
+    assert(start_with_exception("/doc/test/doc  ", "", ' '));
+    assert(start_with_exception("/doc/test/doc/     ", "/", ' '));
+    assert(start_with_exception("/doc/test/doc            ", "/doc/test/doc", ' '));
+    assert(!start_with_exception("/doc/test/doc      ", "o", ' '));
+    assert(!start_with_exception("/doc/test/doc        ", "/doc1", ' '));
+    assert(!start_with_exception("/doc/test/doc  ", "/doc/test/doc1", ' '));
 }
 
 void test_concat_with_delimiter() {
@@ -103,9 +123,19 @@ void test_is_integer() {
 void test_has_sequence_of() {
     assert(!has_sequence_of("", 'c'));
     assert(!has_sequence_of("c", 'c'));
-    assert(!has_sequence_of("cdcd c c cddd cddc", 'c'));
+    assert(!has_sequence_of("cdcd cd c gcddd cddc", 'c'));
     assert(has_sequence_of("cc", 'c'));
     assert(has_sequence_of("dss dddvfs dcc", 'c'));
     assert(has_sequence_of("dss ddccfs dcdsd", 'c'));
     assert(has_sequence_of("dss ddccfs dcdsccd", 'c'));
+}
+
+void test_has_sequence_of_with_exception(){
+    assert(!has_sequence_of_with_exception("", 'c', ' '));
+    assert(!has_sequence_of_with_exception("c", 'c', ' '));
+    assert(!has_sequence_of_with_exception("cdcd cd c bcddd cddc", 'c', ' '));
+    assert(has_sequence_of_with_exception("cc", 'c', ' '));
+    assert(has_sequence_of_with_exception("dss dddvfs dc   c", 'c', ' '));
+    assert(has_sequence_of_with_exception("dss ddc  cfs dcdsd", 'c', ' '));
+    assert(has_sequence_of_with_exception("dss ddc  cfs dcdsccd", 'c', ' '));
 }

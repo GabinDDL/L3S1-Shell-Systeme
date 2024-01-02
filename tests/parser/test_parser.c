@@ -5,6 +5,7 @@
 
 #include "test_parser.h"
 
+void test_tokenize_with_sequence();
 void test_parse_command_no_arguments();
 void test_parse_command_two_arguments();
 void test_parse_command_with_empty_input();
@@ -12,6 +13,14 @@ void test_parse_command_with_only_spaces();
 void test_parse_command_with_spaces_between();
 void test_parse_command_with_spaces_before();
 void test_parse_command_with_more_than_max_tokens();
+void test_parse_pipeline_with_empty_input();
+void test_parse_pipeline_with_single_only_pipe();
+void test_parse_pipeline_with_starting_pipe();
+void test_parse_pipeline_with_final_pipe();
+void test_parse_pipeline_with_wrong_spaces_between_pipe();
+void test_parse_pipeline_with_empty_commands_between_pipe();
+void test_parse_pipeline_with_correct_pipeline_without_redirection();
+void test_parse_pipeline_with_correct_pipeline_with_redirection();
 void test_parse_pipeline_list_with_empty_input();
 void test_parse_pipeline_list_with_only_spaces();
 void test_parse_pipeline_list_with_only_spaces_and_ampersand();
@@ -54,6 +63,9 @@ void test_str_of_pipeline_with_no_truncate_stdout_and_concat_stderr_redirection(
 void test_str_of_pipeline_with_pipes();*/
 
 void test_parser_utils() {
+    printf("Test function test_tokenize_with_sequence\n");
+    test_tokenize_with_sequence();
+    printf("Test test_tokenize_with_sequence passed\n");
 
     printf("Test function test_parse_command_no_arguments\n");
     test_parse_command_no_arguments();
@@ -82,6 +94,34 @@ void test_parser_utils() {
     printf("Test function parse_command_with_more_than_max_tokens\n");
     test_parse_command_with_more_than_max_tokens();
     printf("Test parse_command_with_more_than_max_tokens passed\n");
+
+    printf("Test function test_parse_pipeline_with_empty_input\n");
+    test_parse_pipeline_with_empty_input();
+    printf("Test test_parse_pipeline_with_empty_input passed\n");
+
+    printf("Test function test_parse_pipeline_with_single_only_pipe\n");
+    test_parse_pipeline_with_single_only_pipe();
+    printf("Test test_parse_pipeline_with_single_only_pipe passed\n");
+
+    printf("Test function test_parse_pipeline_with_starting_pipe\n");
+    test_parse_pipeline_with_starting_pipe();
+    printf("Test test_parse_pipeline_with_starting_pipe passed\n");
+
+    printf("Test function test_parse_pipeline_with_final_pipe\n");
+    test_parse_pipeline_with_final_pipe();
+    printf("Test test_parse_pipeline_with_final_pipe passed\n");
+
+    printf("Test function test_parse_pipeline_with_empty_commands_between_pipe\n");
+    test_parse_pipeline_with_empty_commands_between_pipe();
+    printf("Test test_parse_pipeline_with_empty_commands_between_pipe passed\n");
+
+    printf("Test function test_parse_pipeline_with_correct_pipeline_without_redirection\n");
+    test_parse_pipeline_with_correct_pipeline_without_redirection();
+    printf("Test test_parse_pipeline_with_correct_pipeline_without_redirection passed\n");
+
+    printf("Test function test_parse_pipeline_with_correct_pipeline_with_redirection\n");
+    test_parse_pipeline_with_correct_pipeline_with_redirection();
+    printf("Test test_parse_pipeline_with_correct_pipeline_with_redirection passed\n");
 
     printf("Test function test_parse_pipeline_list_with_empty_input\n");
     test_parse_pipeline_list_with_empty_input();
@@ -134,6 +174,7 @@ void test_parser_utils() {
     printf("Test function test_parse_pipeline_list_with_correct_pipelines_with_spaces_and_final_ampersand\n");
     test_parse_pipeline_list_with_correct_pipelines_with_spaces_and_final_ampersand();
     printf("Test test_parse_pipeline_list_with_correct_pipelines_with_spaces_and_final_ampersand passed\n");
+    
     printf("Test function test_parser_command_with_redirections\n");
     test_parser_command_with_redirections();
     printf("Test test_parser_command_with_redirections passed\n");
@@ -169,7 +210,7 @@ void test_parser_utils() {
     printf("Test function test_parser_command_with_redirections_right_arrow_ls\n");
     test_parser_command_with_redirections_right_arrow_ls();
     printf("Test test_parser_command_with_redirections_right_arrow_ls passed\n");
-
+    
     printf("Test function test_str_of_pipeline_simple_command\n");
     test_str_of_pipeline_simple_command();
     printf("Test test_str_of_pipeline_simple_command passed\n");
@@ -241,6 +282,46 @@ void test_parser_utils() {
     printf("Test function test_str_of_pipeline_with_pipes\n");
     test_str_of_pipeline_with_pipes();
     printf("Test test_str_of_pipeline_with_pipes passed\n");*/
+}
+
+
+void test_tokenize_with_sequence() {
+    size_t token_count;
+    char** tokens = tokenize_with_sequence("test | of | tokenize", &token_count, " | ");
+    assert(token_count == 3);
+    assert(strcmp("test", tokens[0]) == 0);
+    assert(strcmp("of", tokens[1]) == 0);
+    assert(strcmp("tokenize", tokens[2]) == 0);
+
+    free_tokens(tokens, token_count);
+    
+    tokens = tokenize_with_sequence("| tedvfd| est |  |of | tokenize | ", &token_count, " | ");
+    assert(token_count == 3);
+    assert(strcmp("| tedvfd| est", tokens[0]) == 0);
+    assert(strcmp(" |of", tokens[1]) == 0);
+    assert(strcmp("tokenize", tokens[2]) == 0);
+
+    free_tokens(tokens, token_count);
+
+    tokens = tokenize_with_sequence("| tedvfd| est|  |of |tokenize |", &token_count, " | ");
+    assert(token_count == 1);
+    assert(strcmp("| tedvfd| est|  |of |tokenize |", tokens[0]) == 0);
+
+    free_tokens(tokens, token_count);
+
+    tokens = tokenize_with_sequence("| tedvfd| est|  |of |tokenize |", &token_count, "");
+    assert(token_count == 1);
+    assert(strcmp("| tedvfd| est|  |of |tokenize |", tokens[0]) == 0);
+
+    free_tokens(tokens, token_count);
+    
+    tokens = tokenize_with_sequence("", &token_count, " | ");
+    assert(token_count == 0);
+    free(tokens);
+
+    tokens = tokenize_with_sequence(" |  |  |  | ", &token_count, " | ");
+    assert(token_count == 0);
+    free(tokens);
 }
 
 void test_parse_command_no_arguments() {
@@ -405,6 +486,238 @@ void test_parse_command_with_more_than_max_tokens() {
     free(input);
 }
 
+void test_parse_pipeline_with_empty_input() {
+    char *input = "";
+
+    // Call the function to test
+    pipeline *pip = parse_pipeline(input, true);
+
+    // Check if the commands of pipeline is NULL
+    assert(pip->commands == NULL);
+
+    // Check the correct number of commands
+    assert(pip->command_count == 0);
+
+    // Check the correct value of to_job
+    assert(pip->to_job);
+
+    // Clean up
+    free_pipeline(pip);
+}
+
+void test_parse_pipeline_with_single_only_pipe() {
+    char *input = "|";
+
+    // Call the function to test
+    pipeline *pip = parse_pipeline(input, true);
+
+    // Check if the pipeline is NULL
+    assert(pip == NULL);
+}
+
+void test_parse_pipeline_with_final_pipe() {
+    char *input = "ls | ls |";
+
+    // Call the function to test
+    pipeline *pip = parse_pipeline(input, true);
+
+    // Check if the pipeline is NULL
+    assert(pip == NULL);
+}
+
+void test_parse_pipeline_with_starting_pipe() {
+    char *input = "| ls | ls";
+
+    // Call the function to test
+    pipeline *pip = parse_pipeline(input, true);
+
+    // Check if the pipeline is NULL
+    assert(pip == NULL);
+}
+
+void test_parse_pipeline_with_empty_commands_between_pipe() {
+    char *input1 = "ls | ";
+    char *input2 = "ls |  | ls";
+    char *input3 = "  | ls |ls | ls";
+    char *input4 = "ls | ls| | ls";
+
+    // Call the function to test
+    pipeline *pip1 = parse_pipeline(input1, true);
+    pipeline *pip2 = parse_pipeline(input2, true);
+    pipeline *pip3 = parse_pipeline(input3, true);
+    pipeline *pip4 = parse_pipeline(input4, true);
+
+    // Check if the pipeline is NULL
+    assert(pip1 == NULL);
+    assert(pip2 == NULL);
+    assert(pip3 == NULL);
+    assert(pip4 == NULL);
+}
+
+void test_parse_pipeline_with_correct_pipeline_without_redirection() {
+    char *input1 = "ls | wc -l";
+    char *input2 = "cmd1 arg1 | cmd2 arg1 arg2 | cmd3 | cmd4 arg1 | cmd5 arg1 arg2 arg3";
+
+    // Call the function to test
+    pipeline *pip1 = parse_pipeline(input1, true);
+    pipeline *pip2 = parse_pipeline(input2, true);
+
+    // Check the correct number of command
+    assert(pip1->command_count == 2);
+    assert(pip2->command_count == 5);
+
+    // Check the correct names of commands
+    assert(strcmp(pip1->commands[0]->name, "ls") == 0);
+    assert(strcmp(pip1->commands[1]->name, "wc") == 0);
+
+    assert(strcmp(pip2->commands[0]->name, "cmd1") == 0);
+    assert(strcmp(pip2->commands[1]->name, "cmd2") == 0);
+    assert(strcmp(pip2->commands[2]->name, "cmd3") == 0);
+    assert(strcmp(pip2->commands[3]->name, "cmd4") == 0);
+    assert(strcmp(pip2->commands[4]->name, "cmd5") == 0);
+
+    // Check the correct number of args of commands
+    assert(pip1->commands[0]->argc == 1);
+    assert(pip1->commands[1]->argc == 2);
+
+    assert(pip2->commands[0]->argc == 2);
+    assert(pip2->commands[1]->argc == 3);
+    assert(pip2->commands[2]->argc == 1);
+    assert(pip2->commands[3]->argc == 2);
+    assert(pip2->commands[4]->argc == 4);
+
+    // Check the correct value of args of commands
+    assert(strcmp(pip1->commands[0]->argv[0], "ls") == 0);
+    assert(pip1->commands[0]->argv[1] == NULL);
+    assert(strcmp(pip1->commands[1]->argv[0], "wc") == 0);
+    assert(strcmp(pip1->commands[1]->argv[1], "-l") == 0);
+    assert(pip1->commands[1]->argv[2] == NULL);
+
+    assert(strcmp(pip2->commands[0]->argv[0], "cmd1") == 0);
+    assert(strcmp(pip2->commands[0]->argv[1], "arg1") == 0);
+    assert(pip2->commands[0]->argv[2] == NULL);
+    assert(strcmp(pip2->commands[1]->argv[0], "cmd2") == 0);
+    assert(strcmp(pip2->commands[1]->argv[1], "arg1") == 0);
+    assert(strcmp(pip2->commands[1]->argv[2], "arg2") == 0);
+    assert(pip2->commands[1]->argv[3] == NULL);
+    assert(strcmp(pip2->commands[2]->argv[0], "cmd3") == 0);
+    assert(pip2->commands[2]->argv[1] == NULL);
+    assert(strcmp(pip2->commands[3]->argv[0], "cmd4") == 0);
+    assert(strcmp(pip2->commands[3]->argv[1], "arg1") == 0);
+    assert(pip2->commands[3]->argv[2] == NULL);
+    assert(strcmp(pip2->commands[4]->argv[0], "cmd5") == 0);
+    assert(strcmp(pip2->commands[4]->argv[1], "arg1") == 0);
+    assert(strcmp(pip2->commands[4]->argv[2], "arg2") == 0);
+    assert(strcmp(pip2->commands[4]->argv[3], "arg3") == 0);
+    assert(pip2->commands[4]->argv[4] == NULL);
+
+    // Check the correct value of to_job
+    assert(pip1->to_job);
+    assert(pip2->to_job);
+
+    free_pipeline(pip1);
+    free_pipeline(pip2);
+}
+
+void test_parse_pipeline_with_correct_pipeline_with_redirection() {
+    char *input1 = "ls | wc -l > t 2> t2";
+    char *input2 = "cmd1 arg1 2> t1 | cmd2 arg1 arg2 2>| t2 | cmd3 | cmd4 arg1 < t4 | cmd5 arg1 arg2 arg3 > t5 2> t6";
+
+    // Call the function to test
+    pipeline *pip1 = parse_pipeline(input1, true);
+    pipeline *pip2 = parse_pipeline(input2, true);
+
+    // Check the correct number of command
+    assert(pip1->command_count == 2);
+    assert(pip2->command_count == 5);
+
+    // Check the correct names of commands
+    assert(strcmp(pip1->commands[0]->name, "ls") == 0);
+    assert(strcmp(pip1->commands[1]->name, "wc") == 0);
+
+    assert(strcmp(pip2->commands[0]->name, "cmd1") == 0);
+    assert(strcmp(pip2->commands[1]->name, "cmd2") == 0);
+    assert(strcmp(pip2->commands[2]->name, "cmd3") == 0);
+    assert(strcmp(pip2->commands[3]->name, "cmd4") == 0);
+    assert(strcmp(pip2->commands[4]->name, "cmd5") == 0);
+
+    // Check the correct number of args of commands
+    assert(pip1->commands[0]->argc == 1);
+    assert(pip1->commands[1]->argc == 2);
+
+    assert(pip2->commands[0]->argc == 2);
+    assert(pip2->commands[1]->argc == 3);
+    assert(pip2->commands[2]->argc == 1);
+    assert(pip2->commands[3]->argc == 2);
+    assert(pip2->commands[4]->argc == 4);
+
+    // Check the correct value of args of commands
+    assert(strcmp(pip1->commands[0]->argv[0], "ls") == 0);
+    assert(pip1->commands[0]->argv[1] == NULL);
+    assert(strcmp(pip1->commands[1]->argv[0], "wc") == 0);
+    assert(strcmp(pip1->commands[1]->argv[1], "-l") == 0);
+    assert(pip1->commands[1]->argv[2] == NULL);
+
+    assert(strcmp(pip2->commands[0]->argv[0], "cmd1") == 0);
+    assert(strcmp(pip2->commands[0]->argv[1], "arg1") == 0);
+    assert(pip2->commands[0]->argv[2] == NULL);
+    assert(strcmp(pip2->commands[1]->argv[0], "cmd2") == 0);
+    assert(strcmp(pip2->commands[1]->argv[1], "arg1") == 0);
+    assert(strcmp(pip2->commands[1]->argv[2], "arg2") == 0);
+    assert(pip2->commands[1]->argv[3] == NULL);
+    assert(strcmp(pip2->commands[2]->argv[0], "cmd3") == 0);
+    assert(pip2->commands[2]->argv[1] == NULL);
+    assert(strcmp(pip2->commands[3]->argv[0], "cmd4") == 0);
+    assert(strcmp(pip2->commands[3]->argv[1], "arg1") == 0);
+    assert(pip2->commands[3]->argv[2] == NULL);
+    assert(strcmp(pip2->commands[4]->argv[0], "cmd5") == 0);
+    assert(strcmp(pip2->commands[4]->argv[1], "arg1") == 0);
+    assert(strcmp(pip2->commands[4]->argv[2], "arg2") == 0);
+    assert(strcmp(pip2->commands[4]->argv[3], "arg3") == 0);
+    assert(pip2->commands[4]->argv[4] == NULL);
+
+    // Check the correct number of redirections of commands
+    assert(pip1->commands[0]->redirection_count == 0);
+    assert(pip1->commands[1]->redirection_count == 2);
+
+    assert(pip2->commands[0]->redirection_count == 1);
+    assert(pip2->commands[1]->redirection_count == 1);
+    assert(pip2->commands[2]->redirection_count == 0);
+    assert(pip2->commands[3]->redirection_count == 1);
+    assert(pip2->commands[4]->redirection_count == 2);
+
+    // Check the correct value of redirections of commands
+    assert(pip1->commands[1]->redirections[0].mode == REDIRECT_NO_OVERWRITE);
+    assert(pip1->commands[1]->redirections[0].type == REDIRECT_STDOUT);
+    assert(strcmp(pip1->commands[1]->redirections[0].filename, "t") == 0);
+    assert(pip1->commands[1]->redirections[1].mode == REDIRECT_NO_OVERWRITE);
+    assert(pip1->commands[1]->redirections[1].type == REDIRECT_STDERR);
+    assert(strcmp(pip1->commands[1]->redirections[1].filename, "t2") == 0);
+
+    assert(pip2->commands[0]->redirections[0].mode == REDIRECT_NO_OVERWRITE);
+    assert(pip2->commands[0]->redirections[0].type == REDIRECT_STDERR);
+    assert(strcmp(pip2->commands[0]->redirections[0].filename, "t1") == 0);
+    assert(pip2->commands[1]->redirections[0].mode == REDIRECT_OVERWRITE);
+    assert(pip2->commands[1]->redirections[0].type == REDIRECT_STDERR);
+    assert(strcmp(pip2->commands[1]->redirections[0].filename, "t2") == 0);
+    assert(pip2->commands[3]->redirections[0].mode == REDIRECT_NONE);
+    assert(pip2->commands[3]->redirections[0].type == REDIRECT_STDIN);
+    assert(strcmp(pip2->commands[3]->redirections[0].filename, "t4") == 0);
+    assert(pip2->commands[4]->redirections[0].mode == REDIRECT_NO_OVERWRITE);
+    assert(pip2->commands[4]->redirections[0].type == REDIRECT_STDOUT);
+    assert(strcmp(pip2->commands[4]->redirections[0].filename, "t5") == 0);
+    assert(pip2->commands[4]->redirections[1].mode == REDIRECT_NO_OVERWRITE);
+    assert(pip2->commands[4]->redirections[1].type == REDIRECT_STDERR);
+    assert(strcmp(pip2->commands[4]->redirections[1].filename, "t6") == 0);
+
+    // Check the correct value of to_job
+    assert(pip1->to_job);
+    assert(pip2->to_job);
+
+    free_pipeline(pip1);
+    free_pipeline(pip2);
+}
+
 void test_parse_pipeline_list_with_empty_input() {
     char *input = "";
 
@@ -492,7 +805,6 @@ void test_parse_pipeline_list_with_middle_ampersands_and_spaces() {
     // Check if the pipeline_list is NULL
     assert(pips == NULL);
 }
-
 
 void test_parse_pipeline_list_with_middle_ampersands_and_spaces2() {
     char *input = "ls &    &";
@@ -776,7 +1088,7 @@ void test_parser_command_with_various_redirections() {
     assert(strcmp(cmd->argv[2], "fic") == 0);
     assert(strcmp(cmd->argv[3], "bar") == 0);
     assert(cmd->argv[4] == NULL);
-    
+
     // Check the correct number of redirections
     assert(cmd->redirection_count == 6);
 
@@ -891,7 +1203,7 @@ void test_parser_command_with_redirections_and_misleading_arguments() {
 }
 
 void test_parser_command_with_redirections_ls_left_arrow() {
-    char* input = "ls <";
+    char *input = "ls <";
 
     // Call the function to test
     command *cmd = parse_command(input);
@@ -902,7 +1214,7 @@ void test_parser_command_with_redirections_ls_left_arrow() {
 }
 
 void test_parser_command_with_redirections_ls_right_arrow() {
-    char* input = "ls >";
+    char *input = "ls >";
 
     // Call the function to test
     command *cmd = parse_command(input);
@@ -912,8 +1224,8 @@ void test_parser_command_with_redirections_ls_right_arrow() {
 
 }
 
-void test_parser_command_with_redirections_right_arrow(){
-    char* input = ">";
+void test_parser_command_with_redirections_right_arrow() {
+    char *input = ">";
 
     // Call the function to test
     command *cmd = parse_command(input);
@@ -924,7 +1236,7 @@ void test_parser_command_with_redirections_right_arrow(){
 }
 
 void test_parser_command_with_redirections_left_arrow() {
-    char* input = "<";
+    char *input = "<";
 
     // Call the function to test
     command *cmd = parse_command(input);
@@ -935,7 +1247,7 @@ void test_parser_command_with_redirections_left_arrow() {
 }
 
 void test_parser_command_with_redirections_right_arrow_ls() {
-    char* input = "> ls";
+    char *input = "> ls";
 
     // Call the function to test
     command *cmd = parse_command(input);

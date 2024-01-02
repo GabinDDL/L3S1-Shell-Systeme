@@ -22,6 +22,14 @@ void free_job(job *j) {
     if (j->pipeline != NULL) {
         free_pipeline(j->pipeline);
     }
+    if (j->job_process != NULL) {
+        for (size_t i = 0; i < j->process_number; i++) {
+            free(j->job_process[i]);
+        }
+
+        free(j->job_process);
+    }
+
     free(j);
 }
 
@@ -108,15 +116,26 @@ job *init_job_to_add(pid_t pid, pipeline *pip, Status s) {
 
     job *new_job = malloc(sizeof(job));
 
-    if (new_job == NULL) {
-        return NULL;
-    }
+    assert(new_job != NULL);
     new_job->pid = pid;
     new_job->status = s;
     new_job->id = id;
     new_job->pipeline = pip;
+    new_job->process_number = 0;
+    new_job->job_process = NULL;
 
     return new_job;
+}
+
+process *init_process_to_add(pid_t pid, command *cmd, Status s) {
+    process *p = malloc(sizeof(process));
+    assert(p != NULL);
+
+    p->pid = pid;
+    p->cmd = cmd;
+    p->status = s;
+
+    return p;
 }
 
 int get_jobs_placement_with_id(unsigned id) {
@@ -167,6 +186,23 @@ int add_new_forked_process_to_jobs(pid_t pid, pipeline *pip, Status s) {
     return SUCCESS;
 }
 
+int add_process_to_job(unsigned id, pid_t pid, command *cmd, Status s) {
+    size_t placement = get_jobs_placement_with_id(id);
+    job *j = jobs[placement];
+    process **new_process = malloc(sizeof(process *) * (j->process_number + 1));
+    assert(new_process != NULL);
+
+    if (j->process_number > 0) {
+        memmove(new_process, j->job_process, j->process_number * sizeof(process *));
+        free(j->job_process);
+    }
+    j->job_process = new_process;
+    new_process[j->process_number] = init_process_to_add(pid, cmd, s);
+    j->process_number++;
+
+    return SUCCESS;
+}
+
 int remove_job_from_jobs(unsigned id) {
     if (jobs == NULL) {
         return COMMAND_FAILURE;
@@ -197,6 +233,27 @@ int remove_job_from_jobs(unsigned id) {
     return SUCCESS;
 }
 
+int update_status_of_process(process *p) {
+    int status;
+    int res = waitpid(p->pid, &status, WNOHANG | WUNTRACED | WCONTINUED);
+
+    if (res < 0) {
+        assert(errno == ECHILD);
+        p->status = DETACHED;
+    } else if (res > 0) {
+        if (WIFEXITED(status)) {
+            p->status = DONE;
+        } else if (WIFSIGNALED(status)) {
+            p->status = KILLED;
+        } else if (WIFSTOPPED(status)) {
+            p->status = STOPPED;
+        } else if (WIFCONTINUED(status)) {
+            p->status = RUNNING;
+        }
+    }
+    return SUCCESS;
+}
+
 int update_status_of_job(job *j) {
     int status;
     int res = waitpid(j->pid, &status, WNOHANG | WUNTRACED | WCONTINUED);
@@ -216,6 +273,9 @@ int update_status_of_job(job *j) {
             j->status = RUNNING;
             print_job(j, false);
         }
+    }
+    for (unsigned i = 0; i < j->process_number; i++) {
+        update_status_of_process(j->job_process[i]);
     }
     return SUCCESS;
 }
