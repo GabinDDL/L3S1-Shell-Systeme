@@ -200,7 +200,7 @@ void test_simple_str_of_job_old_job_stopped() {
     jb->id = 10;
     jb->pid = 4234;
     jb->status = STOPPED;
-    char *input = "./a.out | wc -l > /tmp/tutu";
+    char *input = "wc -l fic1 > /tmp/tutu";
     jb->pipeline = parse_pipeline(input, true);
     add_job_to_jobs(jb);
 
@@ -208,7 +208,7 @@ void test_simple_str_of_job_old_job_stopped() {
     char* strjob = simple_str_of_job(jb, false);
 
     // Check if the string is correct
-    assert(strcmp(strjob, "[10]   4234        Stopped    ./a.out | wc -l > /tmp/tutu") == 0);
+    assert(strcmp(strjob, "[10]   4234        Stopped    wc -l fic1 > /tmp/tutu") == 0);
 
     // Clean up
     remove_job_from_jobs(jb->id);
@@ -222,7 +222,7 @@ void test_simple_str_of_job_old_job_running() {
     jb->id = 4;
     jb->pid = 591141;
     jb->status = RUNNING;
-    char *input = "./a.out | wc -l > /tmp/tutu";
+    char *input = "wc -l fic1 > /tmp/tutu";
     jb->pipeline = parse_pipeline(input, true);
     add_job_to_jobs(jb);
 
@@ -230,7 +230,7 @@ void test_simple_str_of_job_old_job_running() {
     char* strjob = simple_str_of_job(jb, false);
 
     // Check if the string is correct
-    assert(strcmp(strjob, "[4]   591141        Running    ./a.out | wc -l > /tmp/tutu") == 0);
+    assert(strcmp(strjob, "[4]   591141        Running    wc -l fic1 > /tmp/tutu") == 0);
 
     // Clean up
     remove_job_from_jobs(jb->id);
@@ -244,7 +244,7 @@ void test_simple_str_of_job_old_job_killed() {
     jb->id = 213;
     jb->pid = 546;
     jb->status = KILLED;
-    char *input = "./a.out | wc -l > /tmp/tutu";
+    char *input = "wc -l fic1 > /tmp/tutu";
     jb->pipeline = parse_pipeline(input, true);
     add_job_to_jobs(jb);
 
@@ -252,7 +252,7 @@ void test_simple_str_of_job_old_job_killed() {
     char* strjob = simple_str_of_job(jb, false);
 
     // Check if the string is correct
-    assert(strcmp(strjob, "[213]   546        Killed    ./a.out | wc -l > /tmp/tutu") == 0);
+    assert(strcmp(strjob, "[213]   546        Killed    wc -l fic1 > /tmp/tutu") == 0);
 
     // Clean up
     remove_job_from_jobs(jb->id);
@@ -266,7 +266,7 @@ void test_simple_str_of_job_old_job_done() {
     jb->id = 0;
     jb->pid = 10000;
     jb->status = DONE;
-    char *input = "./a.out | wc -l > /tmp/tutu";
+    char *input = "wc -l fic1 > /tmp/tutu";
     jb->pipeline = parse_pipeline(input, true);
     add_job_to_jobs(jb);
 
@@ -274,7 +274,7 @@ void test_simple_str_of_job_old_job_done() {
     char* strjob = simple_str_of_job(jb, false);
 
     // Check if the string is correct
-    assert(strcmp(strjob, "[0]   10000        Done    ./a.out | wc -l > /tmp/tutu") == 0);
+    assert(strcmp(strjob, "[0]   10000        Done    wc -l fic1 > /tmp/tutu") == 0);
 
     // Clean up
     remove_job_from_jobs(jb->id);

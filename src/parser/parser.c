@@ -49,17 +49,17 @@ char *str_of_command(const command *cmd) {
     }
 
     for (size_t i = 0; i < cmd->redirection_count; ++i) {
-        RedirectionType redir_type = (cmd->redirections + 1)->type;
-        RedirectionMode redir_mode = (cmd->redirections + 1)->mode;
+        RedirectionType redir_type = (cmd->redirections + i)->type;
+        RedirectionMode redir_mode = (cmd->redirections + i)->mode;
 
         if (redir_type == REDIRECT_STDIN && redir_mode == REDIRECT_NONE) {
-            result_length += 3 + strlen((cmd->redirections + i)->filename);
-        } else if (redir_type == REDIRECT_STDOUT && redir_mode == REDIRECT_NO_OVERWRITE) {
-            result_length += 3 + strlen((cmd->redirections + i)->filename);
-        } else if (redir_type == REDIRECT_STDERR && redir_mode == REDIRECT_APPEND) {
-            result_length += 5 + strlen((cmd->redirections + i)->filename);
-        } else {
             result_length += 4 + strlen((cmd->redirections + i)->filename);
+        } else if (redir_type == REDIRECT_STDOUT && redir_mode == REDIRECT_NO_OVERWRITE) {
+            result_length += 4 + strlen((cmd->redirections + i)->filename);
+        } else if (redir_type == REDIRECT_STDERR && redir_mode == REDIRECT_APPEND) {
+            result_length += 6 + strlen((cmd->redirections + i)->filename);
+        } else {
+            result_length += 5 + strlen((cmd->redirections + i)->filename);
         }
     }
 
@@ -89,10 +89,10 @@ char *str_of_pipeline(pipeline *p) {
 
     for (size_t i = 0; i < p->command_count; ++i) {
         char *cmd = str_of_command(p->commands[i]);
-        result_length += strlen(cmd);
+        result_length += strlen(cmd) + 1;
         free(cmd);
         if (i < p->command_count - 1) {
-            result_length += 4;
+            result_length += 3;
         }
     }
 
@@ -101,7 +101,7 @@ char *str_of_pipeline(pipeline *p) {
 
     for (size_t i = 0; i < p->command_count; ++i) {
         char *cmd = str_of_command(p->commands[i]);
-        marker += snprintf(result, strlen(cmd) + 1, "%s", cmd);
+        marker += snprintf(result + marker, strlen(cmd) + 1, "%s", cmd);
         free(cmd);
         if (i < p->command_count - 1) {
             result[marker] = ' ';
