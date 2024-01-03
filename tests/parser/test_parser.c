@@ -59,8 +59,8 @@ void test_str_of_pipeline_with_no_truncate_stdout_and_no_truncate_stderr_redirec
 void test_str_of_pipeline_with_no_truncate_stdout_and_eventual_truncate_stdout_redirection();
 void test_str_of_pipeline_with_no_truncate_stdout_and_eventual_truncate_stderr_redirection();
 void test_str_of_pipeline_with_no_truncate_stdout_and_concat_stderr_redirection();
-/*void test_str_of_pipeline_with_pipe();
-void test_str_of_pipeline_with_pipes();*/
+void test_str_of_pipeline_with_pipe();
+void test_str_of_pipeline_with_pipes();
 
 void test_parser_utils() {
     printf("Test function test_tokenize_with_sequence\n");
@@ -275,13 +275,13 @@ void test_parser_utils() {
     test_str_of_pipeline_with_no_truncate_stdout_and_concat_stderr_redirection();
     printf("Test test_str_of_pipeline_with_no_truncate_stdout_and_concat_stderr_redirection passed\n");
 
-    /*printf("Test function test_str_of_pipeline_with_pipe\n");
+    printf("Test function test_str_of_pipeline_with_pipe\n");
     test_str_of_pipeline_with_pipe();
     printf("Test test_str_of_pipeline_with_pipe passed\n");
 
     printf("Test function test_str_of_pipeline_with_pipes\n");
     test_str_of_pipeline_with_pipes();
-    printf("Test test_str_of_pipeline_with_pipes passed\n");*/
+    printf("Test test_str_of_pipeline_with_pipes passed\n");
 }
 
 
@@ -1513,7 +1513,7 @@ void test_str_of_pipeline_with_no_truncate_stdout_and_concat_stderr_redirection(
     free(strpip);
 }
 
-/*void test_str_of_pipeline_with_pipe() {
+void test_str_of_pipeline_with_pipe() {
     // Set up
     char *input = "./test1 | ./test2";
     pipeline *pip = parse_pipeline(input, true);
@@ -1527,9 +1527,9 @@ void test_str_of_pipeline_with_no_truncate_stdout_and_concat_stderr_redirection(
     // Clean up
     free_pipeline(pip);
     free(strpip);
-}*/
+}
 
-/*void test_str_of_pipeline_with_pipes() {
+void test_str_of_pipeline_with_pipes() {
     // Set up
     char *input = "./test1 | ./test2 | ./test1";
     pipeline *pip = parse_pipeline(input, true);
@@ -1543,4 +1543,4 @@ void test_str_of_pipeline_with_no_truncate_stdout_and_concat_stderr_redirection(
     // Clean up
     free_pipeline(pip);
     free(strpip);
-}*/
+}

@@ -44,7 +44,11 @@ void free_jobs_core();
 /* Free allocation of all jobs and their pipelines */
 
 char *state_to_string(Status);
-/*From a status, returns the corresponding string*/
+/* From a status, returns the corresponding string */
+
+int get_jobs_placement_with_id(unsigned);
+/* Returns the position in the job list of the job carrying the corresponding job id,
+ * or -1 if it isn't present*/
 
 int add_job_to_jobs(job *);
 /* Adds a new job to the job list, and returns SUCCESS if the command succeeds */
