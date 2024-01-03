@@ -15,7 +15,7 @@ char *get_correct_path(const char *);
 /* Returns the string, allocated and if the
  * path starts with ~, replaces it with $HOME */
 
-int cd(const command *cmd) {
+int cd(const command_without_substitution *cmd) {
     if (cmd->argc > 2) { // Checks if its the good number of arguments
         print_error("cd: too many arguments");
         return COMMAND_FAILURE;

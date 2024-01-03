@@ -14,7 +14,10 @@
 #include "../utils/constants.h"
 #include "../builtins/builtins.h"
 
-int run_command_without_redirections(command *cmd, bool is_job, pipeline* pip);
+char *fd_to_proc_path(int fd);
+int fd_from_subtitution_arg_with_pipe(argument *sub_arg);
+
+int run_command_without_redirections(const command_without_substitution *cmd_without_subst, bool is_job, pipeline* pip);
 
 int run_command(command *cmd, bool is_job, pipeline* pip);
 /* Run a command.

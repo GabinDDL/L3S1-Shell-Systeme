@@ -3,7 +3,7 @@
 
 #include "../parser/parser.h"
 
-int cd(const command *);
+int cd(const command_without_substitution *);
 /* Changes the current working directory to the "ref" directory
  * if it is is valid, the previous working directory if the parameter
  * is -, or $HOME if no parameter is specified.a

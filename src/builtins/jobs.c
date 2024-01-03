@@ -32,7 +32,7 @@ int print_given_jobs_from_argument_index(const command *cmd, size_t start_index)
     return SUCCESS;
 }
 
-int print_jobs(const command *cmd) {
+int print_jobs(const command_without_substitution *cmd) {
     if (cmd->argc == 1) {
         update_status_of_jobs();
         for (size_t i = 0; i < job_number; ++i) {

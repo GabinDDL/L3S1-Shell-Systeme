@@ -3,7 +3,7 @@
 
 #include "../parser/parser.h"
 
-int print_last_command_result(const command *);
+int print_last_command_result(const command_without_substitution *);
 /* Display the return value of the last entered command*/
 
 #endif

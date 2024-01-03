@@ -9,10 +9,83 @@
 #include <time.h>
 #include <unistd.h>
 
-int run_command_without_redirections(command *cmd, bool already_forked, pipeline *pip) {
+char *fd_to_proc_path(int fd) {
+    static char proc_path[256];
+    sprintf(proc_path, "/proc/self/fd/%d", fd);
+    return proc_path;
+}
+
+int fd_from_subtitution_arg_with_pipe(argument *sub_arg) {
+    assert(sub_arg != NULL);
+    assert(sub_arg->type == ARG_SUBSTITUTION);
+    pipeline *pip = sub_arg->value.substitution;
+    assert(pip != NULL);
+    assert(pip->command_count > 0);
+    assert(pip->commands[0] != NULL);
+
+    int tube[2];
+    assert(pipe(tube) >= 0);
+
+    pid_t pid = fork();
+    assert(pid != -1);
+
+    switch (pid) {
+    case 0:
+        close(tube[0]);
+        dup2(tube[1], STDOUT_FILENO);
+        close(tube[1]);
+
+        run_pipeline(pip);
+        exit(SUCCESS);
+        break;
+    default:
+        close(tube[1]);
+        return tube[0];
+    }
+}
+
+command_without_substitution *prepare_command(command *cmd) {
+    assert(cmd != NULL);
+    assert(cmd->argv != NULL);
+    assert(cmd->argv[0] != NULL);
+    assert(cmd->argv[0]->type == ARG_SIMPLE);
+
+    command_without_substitution *cmd_without_substitution = malloc(sizeof(command_without_substitution));
+    assert(cmd_without_substitution != NULL);
+
+    cmd_without_substitution->name = strdup(cmd->name);
+    cmd_without_substitution->argc = cmd->argc;
+    cmd_without_substitution->argv = malloc(sizeof(char *) * (cmd->argc + 1));
+    assert(cmd_without_substitution->argv != NULL);
+
+    for (size_t i = 0; i < cmd->argc; ++i) {
+        if (cmd->argv[i]->type == ARG_SIMPLE) {
+            cmd_without_substitution->argv[i] = strdup(cmd->argv[i]->value.simple);
+        } else if (cmd->argv[i]->type == ARG_SUBSTITUTION) {
+            int fd = fd_from_subtitution_arg_with_pipe(cmd->argv[i]);
+            cmd_without_substitution->argv[i] = strdup(fd_to_proc_path(fd));
+        }
+    }
+    cmd_without_substitution->argv[cmd->argc] = NULL;
+
+    cmd_without_substitution->redirection_count = cmd->redirection_count;
+    cmd_without_substitution->redirections = malloc(sizeof(redirection) * cmd->redirection_count);
+    assert(cmd_without_substitution->redirections != NULL);
+
+    for (size_t i = 0; i < cmd->redirection_count; i++) {
+        cmd_without_substitution->redirections[i].type = cmd->redirections[i].type;
+        cmd_without_substitution->redirections[i].mode = cmd->redirections[i].mode;
+        cmd_without_substitution->redirections[i].filename = strdup(cmd->redirections[i].filename);
+    }
+
+    return cmd_without_substitution;
+}
+
+int run_command_without_redirections(const command_without_substitution *cmd_without_subst, bool already_forked,
+                                     pipeline *pip) {
     int return_value = 0;
 
-    if (cmd->name == NULL) {
+    if (cmd_without_subst->name == NULL) {
         return_value = last_command_exit_value;
     } else if (strcmp(cmd->argv[0], "pwd") == 0) {
         reset_signal_management();
@@ -110,7 +183,27 @@ int run_command(command *cmd, bool already_forked, pipeline *pip) {
     int fd_in, fd_out, fd_err;
     for (size_t i = 0; i < cmd->redirection_count; ++i) {
         if (cmd->redirections[i].type == REDIRECT_STDIN) {
-            fd_in = open(cmd->redirections[i].filename, O_RDONLY);
+            char *filename = cmd->redirections[i].filename;
+
+            if (is_substitution(filename)) {
+                char *substitution = strdup(filename + 2);
+                substitution[strlen(substitution) - 1] = '\0';
+                pipeline *pip = parse_pipeline(substitution, false);
+                if (pip == NULL) {
+                    fprintf(stderr, "jsh: %s: invalid substitution\n", substitution);
+                    return COMMAND_FAILURE;
+                }
+                argument *sub_arg = malloc(sizeof(argument));
+                assert(sub_arg != NULL);
+                sub_arg->type = ARG_SUBSTITUTION;
+                sub_arg->value.substitution = pip;
+                fd_in = fd_from_subtitution_arg_with_pipe(sub_arg);
+                free(substitution);
+                free(sub_arg);
+            } else {
+                fd_in = open(cmd->redirections[i].filename, O_RDONLY);
+            }
+
             if (fd_in == -1) {
                 if (errno == ENOENT) {
                     perror("open");
@@ -166,7 +259,12 @@ int run_command(command *cmd, bool already_forked, pipeline *pip) {
         }
     }
 
-    return_value = run_command_without_redirections(cmd, already_forked, pip);
+    command_without_substitution *cmd_without_subst = prepare_command(cmd);
+    return_value = run_command_without_redirections(cmd_without_subst, already_forked, pip);
+
+    if (cmd_without_subst != NULL) {
+        free_command_without_substitution(cmd_without_subst);
+    }
 
     dup2(stdin_copy, STDIN_FILENO);
     dup2(stdout_copy, STDOUT_FILENO);

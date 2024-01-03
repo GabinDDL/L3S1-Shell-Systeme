@@ -21,7 +21,7 @@ int kill_job(int job_id, int signal) {
     return COMMAND_FAILURE;
 }
 
-int jsh_kill(const command *cmd) {
+int jsh_kill(const command_without_substitution *cmd) {
     if (cmd->argc < 2) {
         print_error("kill: not enough arguments");
         return COMMAND_FAILURE;

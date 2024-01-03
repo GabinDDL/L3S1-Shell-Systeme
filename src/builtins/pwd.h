@@ -3,7 +3,7 @@
 
 #include "../parser/parser.h"
 
-int pwd(const command *cmd);
+int pwd(const command_without_substitution *cmd);
 /* Displays the absolute physical reference of the current
  * directory. */
 

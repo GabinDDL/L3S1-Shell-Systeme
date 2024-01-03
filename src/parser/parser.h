@@ -16,6 +16,8 @@
 #define TOKEN_PIPELINE_DELIM_C '&'
 #define TOKEN_PIPE_DELIM_C '|'
 
+typedef struct pipeline pipeline;
+
 typedef enum {
     REDIRECT_STDIN,
     REDIRECT_STDOUT,
@@ -48,11 +50,11 @@ typedef struct {
 
 typedef struct {
     // Enum to determine the type of argument
-    enum { ARG_NULL, ARG_SIMPLE, ARG_SUBSTITUTION } type;
+    enum { ARG_SIMPLE, ARG_SUBSTITUTION } type;
 
     // Union to store the actual argument value
     union {
-        const char *simple;      // Pointer to a simple string argument
+        char *simple;      // Pointer to a simple string argument
         pipeline *substitution;  // Pointer to a pipeline for substitution
     } value;
 } argument;
@@ -60,7 +62,7 @@ typedef struct {
 typedef struct {
     char *name;
     size_t argc;
-    argument *argv;
+    argument **argv;
     size_t redirection_count;
     redirection *redirections;
 } command;
@@ -91,12 +93,24 @@ typedef struct {
     */
 
 typedef struct {
+    char *name;
+    size_t argc;
+    char **argv;
+    size_t redirection_count;
+    redirection *redirections;
+} command_without_substitution;
+/*
+ * A command without substitution is a command with its arguments as strings and redirections.
+ */
+
+struct pipeline{
     size_t command_count;
     command **commands;
     bool to_job;
-} pipeline;
+};
 /* A pipeline is a list of commands with a variable to determine whether
  * it should become a job. */
+
 
 typedef struct {
     size_t pipeline_count;
@@ -118,6 +132,8 @@ char **tokenize_with_sequence(const char *, size_t *, const char *);
  * The token_count is set to the number of tokens.
  * The returned array of tokens must be freed by the caller.
  */
+
+int is_substitution(const char *token);
 
 command *parse_command(const char *input);
 /* parse_command takes a string and parses it into a command struct.
@@ -144,6 +160,8 @@ pipeline_list *parse_pipeline_list(const char *input);
 void free_command(command *cmd);
 /* free_command frees the memory allocated by parse_command,
  * the command struct and its fields.*/
+
+void free_command_without_substitution(command_without_substitution *cmd);
 
 void free_pipeline(pipeline *pip);
 /* free_pipeline frees the memory allocated by parse_pipeline,

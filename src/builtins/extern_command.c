@@ -10,7 +10,7 @@
 #include "../utils/core.h"
 #include "extern_command.h"
 
-int extern_command(const command *cmd) {
+int extern_command(const command_without_substitution *cmd) {
     int res_exec;
 
     res_exec = execvp(cmd->name, cmd->argv);

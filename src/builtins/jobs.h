@@ -3,7 +3,7 @@
 
 #include "../utils/core.h"
 
-int print_jobs(const command *);
+int print_jobs(const command_without_substitution *);
 /**
  * Prints the current jobs
 */
