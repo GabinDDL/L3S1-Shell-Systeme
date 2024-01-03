@@ -1,4 +1,5 @@
 #include "run.h"
+#include "../utils/signal_management.h"
 #include <assert.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -14,23 +15,36 @@ int run_command_without_redirections(command *cmd, bool already_forked, pipeline
     if (cmd->name == NULL) {
         return_value = last_command_exit_value;
     } else if (strcmp(cmd->argv[0], "pwd") == 0) {
+        reset_signal_management();
         return_value = pwd(cmd);
+        use_jsh_signal_management();
     } else if (strcmp(cmd->argv[0], "cd") == 0) {
+        reset_signal_management();
         int cd_output = cd(cmd);
+        use_jsh_signal_management();
         update_prompt();
         return_value = cd_output;
     } else if (strcmp(cmd->argv[0], "exit") == 0) {
+        reset_signal_management();
         return_value = exit_jsh(cmd);
+        use_jsh_signal_management();
     } else if (strcmp(cmd->argv[0], "?") == 0) {
+        reset_signal_management();
         return_value = print_last_command_result(cmd);
+        use_jsh_signal_management();
     } else if (strcmp(cmd->argv[0], "jobs") == 0) {
+        reset_signal_management();
         return_value = print_jobs(cmd);
+        use_jsh_signal_management();
     } else if (strcmp(cmd->argv[0], "kill") == 0) {
+        reset_signal_management();
         return_value = jsh_kill(cmd);
+        use_jsh_signal_management();
     } else {
         if (already_forked) {
-
+            reset_signal_management();
             return_value = extern_command(cmd);
+            use_jsh_signal_management();
         } else {
             int status; // status of the created process
             pid_t pid = fork();
@@ -39,7 +53,9 @@ int run_command_without_redirections(command *cmd, bool already_forked, pipeline
 
             switch (pid) {
             case 0:
+                reset_signal_management();
                 return_value = extern_command(cmd);
+                use_jsh_signal_management();
                 if (return_value < 0) {
                     perror("execvp");
                     exit(errno);
@@ -47,7 +63,6 @@ int run_command_without_redirections(command *cmd, bool already_forked, pipeline
                 exit(SUCCESS);
                 break;
             default:
-
                 waitpid(pid, &status, WUNTRACED);
                 if (WIFSTOPPED(status)) {
                     setpgid(pid, pid);

@@ -9,10 +9,12 @@
 #include "utils/constants.h"
 #include "utils/core.h"
 #include "utils/jobs_core.h"
+#include "utils/signal_management.h"
 
 int main() {
     init_core();
     init_const();
+    use_jsh_signal_management();
 
     rl_outstream = stderr;
     while (1) {
