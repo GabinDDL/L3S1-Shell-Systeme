@@ -4,7 +4,7 @@
 #include "../utils/int_utils.h"
 #include "../utils/string_utils.h"
 
-int print_given_jobs_from_argument_index(const command *cmd, size_t start_index) {
+int print_given_jobs_from_argument_index(const command_without_substitution *cmd, size_t start_index) {
     update_status_of_jobs();
     for (size_t i = start_index; i < cmd->argc; ++i) {
         if (cmd->argv[i][0] == '%') {

@@ -126,14 +126,26 @@ char *str_of_pipeline(pipeline *p);
 void free_tokens(char **, size_t);
 /* Frees tokens */
 
-char **tokenize_with_sequence(const char *, size_t *, const char *);
-/* Tokenizes the input string into an array of tokens.
- * The tokens are separated by sequences of char.
+char **tokenize(const char *input, size_t *token_count, const char *delim);
+/*
+ * Tokenizes the input string into an array of tokens.
+ * The tokens are separated by whitespace.
  * The token_count is set to the number of tokens.
  * The returned array of tokens must be freed by the caller.
  */
 
+char **tokenize_command_with_special_pipe(const char *input, size_t *token_count);
+/*
+ * Tokenizes the input string into an array of tokens for parsing a command with special pipe.
+ */
+
+char **tokenize_pipeline_with_special_pipe(const char *input, size_t *token_count);
+/*
+ * Tokenizes the input string into an array of tokens for parsing a pipeline with special pipe.
+ */
+
 int is_substitution(const char *token);
+/* Checks if a token is a pipe substitution */
 
 command *parse_command(const char *input);
 /* parse_command takes a string and parses it into a command struct.

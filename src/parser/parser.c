@@ -147,12 +147,6 @@ void free_tokens(char **tokens, size_t token_count) {
     free(tokens);
 }
 
-/*
- * Tokenizes the input string into an array of tokens.
- * The tokens are separated by whitespace.
- * The token_count is set to the number of tokens.
- * The returned array of tokens must be freed by the caller.
- */
 char **tokenize(const char *input, size_t *token_count, const char *delimiter) {
     char *mutable_input = strdup(input);
     char **tokens = malloc(MAX_TOKENS * sizeof(char *));
@@ -188,7 +182,7 @@ char **tokenize_command_with_special_pipe(const char *input, size_t *token_count
     size_t substitution_depth = 0;
     size_t count = 0;
 
-    while (end < len_input) {
+    while (end < len_input && count < MAX_TOKENS) {
         if (input[end] == '(' && end > 0 && input[end - 1] == '<') {
             substitution_depth++;
         } else if (input[end] == ')') {
@@ -215,67 +209,21 @@ char **tokenize_command_with_special_pipe(const char *input, size_t *token_count
         }
     }
 
-    if (end - start > 0) {
+    if (end - start > 0 && count < MAX_TOKENS) {
         tokens[count] = malloc(sizeof(char) * (end - start + 1));
         memmove(tokens[count], input + start, end - start);
         tokens[count][end - start] = '\0';
         count++;
     }
 
+    if (substitution_depth != 0) {
+        fprintf(stderr, "jsh: parse error\n");
+        free_tokens(tokens, count);
+        return NULL;
+    }
+
     *token_count = count;
 
-    return tokens;
-}
-
-char **tokenize_with_sequence(const char *input, size_t *token_count, const char *seq_delimiter) {
-    size_t len_input = strlen(input);
-    size_t len_seq_delimiter = strlen(seq_delimiter);
-    char **tokens = malloc(MAX_TOKENS * sizeof(char *));
-
-    if (len_input == 0) {
-        *token_count = 0;
-        return tokens;
-    }
-
-    size_t count = 0;
-    size_t start = 0;
-    size_t end = 0;
-
-    while (end < len_input) {
-        bool is_pattern = false;
-        if (len_seq_delimiter > 0 && end < len_input - len_seq_delimiter + 1) {
-            is_pattern = true;
-            for (size_t i = 0; i < len_seq_delimiter; i++) {
-                if (input[end + i] != seq_delimiter[i]) {
-                    is_pattern = false;
-                    break;
-                }
-            }
-        }
-        if (is_pattern) {
-            if (end - start == 0) {
-                start += len_seq_delimiter;
-                end += len_seq_delimiter;
-                continue;
-            }
-            tokens[count] = malloc(sizeof(char) * (end - start + 1));
-            memmove(tokens[count], input + start, end - start);
-            tokens[count][end - start] = '\0';
-            end += len_seq_delimiter;
-            start = end;
-            count++;
-            continue;
-        }
-        end++;
-    }
-
-    if (end - start != 0) {
-        tokens[count] = malloc(sizeof(char) * (end - start + 1));
-        memmove(tokens[count], input + start, end - start);
-        tokens[count][end - start] = '\0';
-        count++;
-    }
-    *token_count = count;
     return tokens;
 }
 
@@ -307,8 +255,17 @@ char **tokenize_pipeline_with_special_pipe(const char *input, size_t *token_coun
             substitution_depth--;
         }
 
-        // Check for pipe delimiter outside substitutions and not preceded by '>'
-        bool is_delimiter = (input[i] == '|' && substitution_depth == 0 && (i == 0 || input[i - 1] != '>'));
+        if (substitution_depth < 0) {
+            fprintf(stderr, "jsh: parse error near `%c'\n", input[i]);
+            free_tokens(tokens, count);
+            return NULL;
+        }
+
+        // Check for " | " delimiter outside substitutions
+        bool is_delimiter = false;
+        if (substitution_depth == 0 && i + 2 < len_input) {
+            is_delimiter = (input[i] == ' ' && input[i + 1] == '|' && input[i + 2] == ' ');
+        }
 
         if (is_delimiter || i == len_input - 1) {
             size_t token_len = is_delimiter ? i - start : i - start + 1;
@@ -325,13 +282,19 @@ char **tokenize_pipeline_with_special_pipe(const char *input, size_t *token_coun
                 tokens[count][token_len] = '\0';
                 count++;
             }
-            start = i + 1;
+            start = i + (is_delimiter ? 3 : 1); // Skip " | " when delimiter is found
         }
 
         // Check for token limit
         if (count >= MAX_TOKENS) {
             break;
         }
+    }
+
+    if (substitution_depth != 0) {
+        fprintf(stderr, "jsh: parse error\n");
+        free_tokens(tokens, count);
+        return NULL;
     }
 
     *token_count = count;
@@ -348,7 +311,7 @@ int is_redirection(const char *token) {
 
 int is_substitution(const char *token) {
     int len = strlen(token);
-    return len > 2 && token[0] == '<' && token[1] == '(' && token[len - 1] == ')';
+    return len > 3 && token[0] == '<' && token[1] == '(' && token[len - 1] == ')';
 }
 
 void handle_parse_error(char **tokens, size_t token_count, command *cmd) {
@@ -512,12 +475,18 @@ command *parse_redirections(char **tokens, size_t token_count, command *cmd) {
             i += 2;
         } else {
 
+            cmd->argv[cmd->argc] = malloc(sizeof(argument));
             if (is_substitution(tokens[i])) {
                 cmd->argv[cmd->argc]->type = ARG_SUBSTITUTION;
+
                 char *substitution = strdup(tokens[i] + 2);
                 substitution[strlen(substitution) - 1] = '\0';
-                cmd->argv[cmd->argc]->value.substitution = parse_pipeline(substitution, false);
-                if (cmd->argv[cmd->argc]->value.substitution == NULL) {
+                pipeline *substitution_pipeline = parse_pipeline(substitution, false);
+                if (substitution_pipeline == NULL ||
+                    (cmd->argv[cmd->argc]->value.substitution->command_count == 1 &&
+                     cmd->argv[cmd->argc]->value.substitution->commands[0]->name == NULL)) {
+                    fprintf(stderr, "jsh: parse error near `%s'\n", tokens[i]);
+                    free(substitution);
                     handle_parse_error(tokens, token_count, cmd);
                     for (size_t i = 0; i < redirection_count; ++i) {
                         if (redirections[i].filename != NULL) {
@@ -525,13 +494,22 @@ command *parse_redirections(char **tokens, size_t token_count, command *cmd) {
                         }
                     }
                     free(redirections);
+
+                    if (substitution_pipeline != NULL) {
+                        free_pipeline(substitution_pipeline);
+                    }
                     return NULL;
                 }
+
+                cmd->argv[cmd->argc]->value.substitution = substitution_pipeline;
+
+                free(substitution);
             } else {
                 cmd->argv[cmd->argc]->type = ARG_SIMPLE;
                 cmd->argv[cmd->argc]->value.simple = strdup(tokens[i]);
 
                 if (cmd->argv[cmd->argc]->value.simple == NULL) {
+                    fprintf(stderr, "jsh: parse error near `%s'\n", tokens[i]);
                     handle_parse_error(tokens, token_count, cmd);
                     for (size_t i = 0; i < redirection_count; ++i) {
                         if (redirections[i].filename != NULL) {
@@ -566,7 +544,9 @@ command *parse_command(const char *input) {
     size_t token_count = 0;
     char **tokens = tokenize_command_with_special_pipe(input, &token_count);
 
-    assert(tokens != NULL);
+    if (tokens == NULL) {
+        return NULL;
+    }
 
     command *cmd = malloc(sizeof(command));
 
@@ -589,9 +569,18 @@ command *parse_command(const char *input) {
         return NULL;
     }
 
+    if (is_substitution(tokens[0])) {
+        fprintf(stderr, "jsh: parse error near `%s'\n", tokens[0]);
+        free_tokens(tokens, token_count);
+        free(cmd);
+        return NULL;
+    }
+
     cmd->name = strdup(tokens[0]);
     cmd->argc = token_count; // Takes into account the command name
     cmd->argv = malloc(sizeof(argument *) * (cmd->argc + 1));
+    cmd->redirection_count = 0;
+    cmd->redirections = NULL;
 
     assert(cmd->argv != NULL);
 
@@ -599,6 +588,26 @@ command *parse_command(const char *input) {
     for (i = 0; i < cmd->argc; ++i) {
         if (is_redirection(tokens[i])) {
             break;
+        }
+
+        // Error with a token being `<()`
+        if (strcmp(tokens[i], "<()") == 0) {
+            fprintf(stderr, "jsh: parse error near `%s'\n", tokens[i]);
+            free(cmd->name);
+            for (size_t j = 0; j < i; ++j) {
+                if (cmd->argv[j] != NULL) {
+                    if (cmd->argv[j]->type == ARG_SUBSTITUTION) {
+                        free_pipeline(cmd->argv[j]->value.substitution);
+                    } else {
+                        free(cmd->argv[j]->value.simple);
+                    }
+                    free(cmd->argv[j]);
+                }
+            }
+            free(cmd->argv);
+            free(cmd);
+            free_tokens(tokens, token_count);
+            return NULL;
         }
 
         cmd->argv[i] = malloc(sizeof(argument));
@@ -609,18 +618,55 @@ command *parse_command(const char *input) {
             cmd->argv[i]->type = ARG_SUBSTITUTION;
             char *substitution = strdup(tokens[i] + 2);
             substitution[strlen(substitution) - 1] = '\0';
-            cmd->argv[i]->value.substitution = parse_pipeline(substitution, false);
-            if (cmd->argv[i]->value.substitution == NULL) {
+            pipeline *substitution_pipeline = parse_pipeline(substitution, false);
+            if (substitution_pipeline == NULL ||
+                (substitution_pipeline->command_count == 1 && substitution_pipeline->commands[0]->name == NULL)) {
+                fprintf(stderr, "jsh: parse error near `%s'\n", tokens[i]);
                 free(substitution);
-                handle_parse_error(tokens, token_count, cmd);
+                free(cmd->name);
+                for (size_t j = 0; j < i; ++j) {
+                    if (cmd->argv[j] != NULL) {
+                        if (cmd->argv[j]->type == ARG_SUBSTITUTION) {
+                            free_pipeline(cmd->argv[j]->value.substitution);
+                        } else {
+                            free(cmd->argv[j]->value.simple);
+                        }
+                        free(cmd->argv[j]);
+                    }
+                }
+
+                if (substitution_pipeline != NULL) {
+                    free_pipeline(substitution_pipeline);
+                }
+
+                free(cmd->argv[i]);
+                free(cmd->argv);
+                free(cmd);
+                free_tokens(tokens, token_count);
                 return NULL;
             }
+            cmd->argv[i]->value.substitution = substitution_pipeline;
             free(substitution);
         } else {
             cmd->argv[i]->type = ARG_SIMPLE;
             cmd->argv[i]->value.simple = strdup(tokens[i]);
             if (cmd->argv[i]->value.simple == NULL) {
-                handle_parse_error(tokens, token_count, cmd);
+                fprintf(stderr, "jsh: parse error near `%s'\n", tokens[i]);
+                free(cmd->name);
+                for (size_t j = 0; j < i; ++j) {
+                    if (cmd->argv[j] != NULL) {
+                        if (cmd->argv[j]->type == ARG_SUBSTITUTION) {
+                            free_pipeline(cmd->argv[j]->value.substitution);
+                        } else {
+                            free(cmd->argv[j]->value.simple);
+                        }
+                        free(cmd->argv[j]);
+                    }
+                }
+                free(cmd->argv[i]);
+                free(cmd->argv);
+                free(cmd);
+                free_tokens(tokens, token_count);
                 return NULL;
             }
         }
@@ -649,7 +695,11 @@ pipeline *parse_pipeline(const char *input, bool to_job) {
 
     size_t token_count = 0;
     char **tokens = tokenize_pipeline_with_special_pipe(input, &token_count);
-    assert(tokens != NULL);
+
+    if (tokens == NULL) {
+        free(pip);
+        return NULL;
+    }
 
     if (token_count == 0) {
         free_tokens(tokens, token_count);
@@ -756,16 +806,18 @@ void free_command(command *cmd) {
 
     size_t i = 0;
     for (i = 0; i < cmd->argc; ++i) {
-        if (cmd->argv[i]->type == ARG_SIMPLE) {
-            if (cmd->argv[i]->value.simple != NULL)
-                free(cmd->argv[i]->value.simple);
-            cmd->argv[i]->value.simple = NULL;
-        } else {
-            if (cmd->argv[i]->value.substitution != NULL)
-                free_pipeline(cmd->argv[i]->value.substitution);
-            cmd->argv[i]->value.substitution = NULL;
+        if (cmd->argv[i] != NULL) {
+            if (cmd->argv[i]->type == ARG_SIMPLE) {
+                if (cmd->argv[i]->value.simple != NULL)
+                    free(cmd->argv[i]->value.simple);
+                cmd->argv[i]->value.simple = NULL;
+            } else {
+                if (cmd->argv[i]->value.substitution != NULL)
+                    free_pipeline(cmd->argv[i]->value.substitution);
+                cmd->argv[i]->value.substitution = NULL;
+            }
+            free(cmd->argv[i]);
         }
-        free(cmd->argv[i]);
     }
 
     if (cmd->argv != NULL)

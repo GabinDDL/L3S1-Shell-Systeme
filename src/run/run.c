@@ -46,6 +46,20 @@ int fd_from_subtitution_arg_with_pipe(argument *sub_arg) {
 
 command_without_substitution *prepare_command(command *cmd) {
     assert(cmd != NULL);
+
+    if (cmd->name == NULL) {
+        command_without_substitution *cmd_without_substitution = malloc(sizeof(command_without_substitution));
+        assert(cmd_without_substitution != NULL);
+
+        cmd_without_substitution->name = NULL;
+        cmd_without_substitution->argc = 0;
+        cmd_without_substitution->argv = NULL;
+        cmd_without_substitution->redirection_count = 0;
+        cmd_without_substitution->redirections = NULL;
+
+        return cmd_without_substitution;
+    }
+
     assert(cmd->argv != NULL);
     assert(cmd->argv[0] != NULL);
     assert(cmd->argv[0]->type == ARG_SIMPLE);
@@ -87,36 +101,42 @@ int run_command_without_redirections(const command_without_substitution *cmd_wit
 
     if (cmd_without_subst->name == NULL) {
         return_value = last_command_exit_value;
-    } else if (strcmp(cmd->argv[0], "pwd") == 0) {
+
+        fflush(stderr);
+        fflush(stdout);
+        return return_value;
+    }
+
+    if (strcmp(cmd_without_subst->argv[0], "pwd") == 0) {
         reset_signal_management();
-        return_value = pwd(cmd);
+        return_value = pwd(cmd_without_subst);
         use_jsh_signal_management();
-    } else if (strcmp(cmd->argv[0], "cd") == 0) {
+    } else if (strcmp(cmd_without_subst->argv[0], "cd") == 0) {
         reset_signal_management();
-        int cd_output = cd(cmd);
+        int cd_output = cd(cmd_without_subst);
         use_jsh_signal_management();
         update_prompt();
         return_value = cd_output;
-    } else if (strcmp(cmd->argv[0], "exit") == 0) {
+    } else if (strcmp(cmd_without_subst->argv[0], "exit") == 0) {
         reset_signal_management();
-        return_value = exit_jsh(cmd);
+        return_value = exit_jsh(cmd_without_subst);
         use_jsh_signal_management();
-    } else if (strcmp(cmd->argv[0], "?") == 0) {
+    } else if (strcmp(cmd_without_subst->argv[0], "?") == 0) {
         reset_signal_management();
-        return_value = print_last_command_result(cmd);
+        return_value = print_last_command_result(cmd_without_subst);
         use_jsh_signal_management();
-    } else if (strcmp(cmd->argv[0], "jobs") == 0) {
+    } else if (strcmp(cmd_without_subst->argv[0], "jobs") == 0) {
         reset_signal_management();
-        return_value = print_jobs(cmd);
+        return_value = print_jobs(cmd_without_subst);
         use_jsh_signal_management();
-    } else if (strcmp(cmd->argv[0], "kill") == 0) {
+    } else if (strcmp(cmd_without_subst->argv[0], "kill") == 0) {
         reset_signal_management();
-        return_value = jsh_kill(cmd);
+        return_value = jsh_kill(cmd_without_subst);
         use_jsh_signal_management();
     } else {
         if (already_forked) {
             reset_signal_management();
-            return_value = extern_command(cmd);
+            return_value = extern_command(cmd_without_subst);
             use_jsh_signal_management();
         } else {
             int status; // status of the created process
@@ -127,7 +147,7 @@ int run_command_without_redirections(const command_without_substitution *cmd_wit
             switch (pid) {
             case 0:
                 reset_signal_management();
-                return_value = extern_command(cmd);
+                return_value = extern_command(cmd_without_subst);
                 use_jsh_signal_management();
                 if (return_value < 0) {
                     perror("execvp");

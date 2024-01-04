@@ -5,7 +5,9 @@
 
 #include "test_parser.h"
 
-void test_tokenize_with_sequence();
+void test_tokenize();
+void test_tokenize_command_with_special_pipe();
+void test_tokenize_pipeline_with_special_pipe();
 void test_parse_command_no_arguments();
 void test_parse_command_two_arguments();
 void test_parse_command_with_empty_input();
@@ -61,11 +63,27 @@ void test_str_of_pipeline_with_no_truncate_stdout_and_eventual_truncate_stderr_r
 void test_str_of_pipeline_with_no_truncate_stdout_and_concat_stderr_redirection();
 void test_str_of_pipeline_with_pipe();
 void test_str_of_pipeline_with_pipes();
+void test_parse_pipeline_with_pipe_substitutions();
+void test_parse_pipeline_with_multiple_pipe_substitutions();
+void test_parse_pipeline_list_with_pipes_substitutions();
+void test_invalid_pipe_substitution1();
+void test_invalid_pipe_substitution2();
+void test_invalid_pipe_substitution3();
+void test_invalid_pipe_substitution4();
+void test_invalid_pipe_substitution5();
 
 void test_parser_utils() {
-    printf("Test function test_tokenize_with_sequence\n");
-    test_tokenize_with_sequence();
-    printf("Test test_tokenize_with_sequence passed\n");
+    printf("Test function test_tokenize\n");
+    test_tokenize();
+    printf("Test test_tokenize passed\n");
+
+    printf("Test function test_tokenize_command_with_special_pipe\n");
+    test_tokenize_command_with_special_pipe();
+    printf("Test test_tokenize_command_with_special_pipe passed\n");
+
+    printf("Test function test_tokenize_pipeline_with_special_pipe\n");
+    test_tokenize_pipeline_with_special_pipe();
+    printf("Test test_tokenize_pipeline_with_special_pipe passed\n");
 
     printf("Test function test_parse_command_no_arguments\n");
     test_parse_command_no_arguments();
@@ -282,12 +300,90 @@ void test_parser_utils() {
     printf("Test function test_str_of_pipeline_with_pipes\n");
     test_str_of_pipeline_with_pipes();
     printf("Test test_str_of_pipeline_with_pipes passed\n");
+
+    printf("Test function test_parse_pipeline_with_pipe_substitutions\n");
+    test_parse_pipeline_with_pipe_substitutions();
+    printf("Test test_parse_pipeline_with_pipe_substitutions passed\n");
+
+    printf("Test function test_parse_pipeline_with_multiple_pipe_substitutions\n");
+    test_parse_pipeline_with_multiple_pipe_substitutions();
+    printf("Test test_parse_pipeline_with_multiple_pipe_substitutions passed\n");
+
+    printf("Test function test_parse_pipeline_list_with_pipes_substitutions\n");
+    test_parse_pipeline_list_with_pipes_substitutions();
+    printf("Test test_parse_pipeline_list_with_pipes_substitutions passed\n");
+
+    printf("Test function test_invalid_pipe_substitution1\n");
+    test_invalid_pipe_substitution1();
+    printf("Test test_invalid_pipe_substitution1 passed\n");
+
+    printf("Test function test_invalid_pipe_substitution2\n");
+    test_invalid_pipe_substitution2();
+    printf("Test test_invalid_pipe_substitution2 passed\n");
+
+    printf("Test function test_invalid_pipe_substitution3\n");
+    test_invalid_pipe_substitution3();
+    printf("Test test_invalid_pipe_substitution3 passed\n");
+
+    printf("Test function test_invalid_pipe_substitution4\n");
+    test_invalid_pipe_substitution4();
+    printf("Test test_invalid_pipe_substitution4 passed\n");
+
+    printf("Test function test_invalid_pipe_substitution5\n");
+    test_invalid_pipe_substitution5();
+    printf("Test test_invalid_pipe_substitution5 passed\n");    
 }
 
+void test_tokenize() {
 
-void test_tokenize_with_sequence() {
     size_t token_count;
-    char** tokens = tokenize_with_sequence("test | of | tokenize", &token_count, " | ");
+    char **tokens = tokenize("test of tokenize", &token_count, " ");
+    assert(token_count == 3);
+    assert(strcmp("test", tokens[0]) == 0);
+    assert(strcmp("of", tokens[1]) == 0);
+    assert(strcmp("tokenize", tokens[2]) == 0);
+
+    free_tokens(tokens, token_count);
+
+    tokens = tokenize("test|of|tokenize|12||", &token_count, "|");
+    assert(token_count == 4);
+    assert(strcmp("test", tokens[0]) == 0);
+    assert(strcmp("of", tokens[1]) == 0);
+    assert(strcmp("tokenize", tokens[2]) == 0);
+    assert(strcmp("12", tokens[3]) == 0);
+
+    free_tokens(tokens, token_count);
+}
+
+void test_tokenize_command_with_special_pipe() {
+
+    size_t token_count;
+    char **tokens = tokenize_command_with_special_pipe("cmd1 arg1 <( cmd2 arg2 | cmd3 ) 2> test", &token_count);
+    assert(token_count == 5);
+    assert(strcmp("cmd1", tokens[0]) == 0);
+    assert(strcmp("arg1", tokens[1]) == 0);
+    assert(strcmp("<( cmd2 arg2 | cmd3 )", tokens[2]) == 0);
+    assert(strcmp("2>", tokens[3]) == 0);
+    assert(strcmp("test", tokens[4]) == 0);
+
+    free_tokens(tokens, token_count);
+
+    tokens = tokenize_command_with_special_pipe("cmd1 arg1 <( cmd2 arg2 | cmd3 ) 2> test <( cmd4 | cmd5 )", &token_count);
+    assert(token_count == 6);
+    assert(strcmp("cmd1", tokens[0]) == 0);
+    assert(strcmp("arg1", tokens[1]) == 0);
+    assert(strcmp("<( cmd2 arg2 | cmd3 )", tokens[2]) == 0);
+    assert(strcmp("2>", tokens[3]) == 0);
+    assert(strcmp("test", tokens[4]) == 0);
+    assert(strcmp("<( cmd4 | cmd5 )", tokens[5]) == 0);
+
+    free_tokens(tokens, token_count);
+}
+
+void test_tokenize_pipeline_with_special_pipe() {
+    
+    size_t token_count;
+    char** tokens = tokenize_pipeline_with_special_pipe("test | of | tokenize", &token_count);
     assert(token_count == 3);
     assert(strcmp("test", tokens[0]) == 0);
     assert(strcmp("of", tokens[1]) == 0);
@@ -295,7 +391,7 @@ void test_tokenize_with_sequence() {
 
     free_tokens(tokens, token_count);
     
-    tokens = tokenize_with_sequence("| tedvfd| est |  |of | tokenize | ", &token_count, " | ");
+    tokens = tokenize_pipeline_with_special_pipe("| tedvfd| est |  |of | tokenize | ", &token_count);
     assert(token_count == 3);
     assert(strcmp("| tedvfd| est", tokens[0]) == 0);
     assert(strcmp(" |of", tokens[1]) == 0);
@@ -303,23 +399,17 @@ void test_tokenize_with_sequence() {
 
     free_tokens(tokens, token_count);
 
-    tokens = tokenize_with_sequence("| tedvfd| est|  |of |tokenize |", &token_count, " | ");
-    assert(token_count == 1);
-    assert(strcmp("| tedvfd| est|  |of |tokenize |", tokens[0]) == 0);
-
-    free_tokens(tokens, token_count);
-
-    tokens = tokenize_with_sequence("| tedvfd| est|  |of |tokenize |", &token_count, "");
+    tokens = tokenize_pipeline_with_special_pipe("| tedvfd| est|  |of |tokenize |", &token_count);
     assert(token_count == 1);
     assert(strcmp("| tedvfd| est|  |of |tokenize |", tokens[0]) == 0);
 
     free_tokens(tokens, token_count);
     
-    tokens = tokenize_with_sequence("", &token_count, " | ");
+    tokens = tokenize_pipeline_with_special_pipe("", &token_count);
     assert(token_count == 0);
     free(tokens);
 
-    tokens = tokenize_with_sequence(" |  |  |  | ", &token_count, " | ");
+    tokens = tokenize_pipeline_with_special_pipe(" |  |  |  | ", &token_count);
     assert(token_count == 0);
     free(tokens);
 }
@@ -337,8 +427,11 @@ void test_parse_command_no_arguments() {
     assert(cmd->argc == 1);
 
     // Check if the arguments are correct
-    assert(strcmp(cmd->argv[0], "ls") == 0);
-    assert(cmd->argv[1] == NULL);
+    assert(cmd->argv != NULL);
+    
+    assert(cmd->argv[0] != NULL);
+    assert(cmd->argv[0]->type == ARG_SIMPLE);
+    assert(strcmp(cmd->argv[0]->value.simple, "ls") == 0);
 
     // Clean up
     free_command(cmd);
@@ -357,9 +450,20 @@ void test_parse_command_two_arguments() {
     assert(cmd->argc == 3);
 
     // Check if the arguments are correct
-    assert(strcmp(cmd->argv[0], "ls") == 0);
-    assert(strcmp(cmd->argv[1], "-l") == 0);
-    assert(strcmp(cmd->argv[2], "/home") == 0);
+    assert(cmd->argv != NULL);
+    
+    assert(cmd->argv[0] != NULL);
+    assert(cmd->argv[0]->type == ARG_SIMPLE);
+    assert(strcmp(cmd->argv[0]->value.simple, "ls") == 0);
+
+    assert(cmd->argv[1] != NULL);
+    assert(cmd->argv[1]->type == ARG_SIMPLE);
+    assert(strcmp(cmd->argv[1]->value.simple, "-l") == 0);
+
+    assert(cmd->argv[2] != NULL);
+    assert(cmd->argv[2]->type == ARG_SIMPLE);
+    assert(strcmp(cmd->argv[2]->value.simple, "/home") == 0);
+
     assert(cmd->argv[3] == NULL);
 
     // Clean up
@@ -417,9 +521,20 @@ void test_parse_command_with_spaces_between() {
     assert(cmd->argc == 3);
 
     // Check if the arguments are correct
-    assert(strcmp(cmd->argv[0], "ls") == 0);
-    assert(strcmp(cmd->argv[1], "-l") == 0);
-    assert(strcmp(cmd->argv[2], "/home") == 0);
+    assert(cmd->argv != NULL);
+
+    assert(cmd->argv[0] != NULL);
+    assert(cmd->argv[0]->type == ARG_SIMPLE);
+    assert(strcmp(cmd->argv[0]->value.simple, "ls") == 0);
+
+    assert(cmd->argv[1] != NULL);
+    assert(cmd->argv[1]->type == ARG_SIMPLE);
+    assert(strcmp(cmd->argv[1]->value.simple, "-l") == 0);
+
+    assert(cmd->argv[2] != NULL);
+    assert(cmd->argv[2]->type == ARG_SIMPLE);
+    assert(strcmp(cmd->argv[2]->value.simple, "/home") == 0);
+
     assert(cmd->argv[3] == NULL);
 
     // Clean up
@@ -439,10 +554,19 @@ void test_parse_command_with_spaces_before() {
     assert(cmd->argc == 3);
 
     // Check if the arguments are correct
-    assert(strcmp(cmd->argv[0], "ls") == 0);
-    assert(strcmp(cmd->argv[1], "-l") == 0);
-    assert(strcmp(cmd->argv[2], "/home") == 0);
-    assert(cmd->argv[3] == NULL);
+    assert(cmd->argv != NULL);
+
+    assert(cmd->argv[0] != NULL);
+    assert(cmd->argv[0]->type == ARG_SIMPLE);
+    assert(strcmp(cmd->argv[0]->value.simple, "ls") == 0);
+
+    assert(cmd->argv[1] != NULL);
+    assert(cmd->argv[1]->type == ARG_SIMPLE);
+    assert(strcmp(cmd->argv[1]->value.simple, "-l") == 0);
+
+    assert(cmd->argv[2] != NULL);
+    assert(cmd->argv[2]->type == ARG_SIMPLE);
+    assert(strcmp(cmd->argv[2]->value.simple, "/home") == 0);
 
     // Clean up
     free_command(cmd);
@@ -475,8 +599,12 @@ void test_parse_command_with_more_than_max_tokens() {
     assert(cmd->argc == MAX_TOKENS);
 
     // Check if the arguments are correct
+    assert(cmd->argv != NULL);
+
     for (i = 0; i < MAX_TOKENS; ++i) {
-        assert(strcmp(cmd->argv[i], "a") == 0);
+        assert(cmd->argv[i] != NULL);
+        assert(cmd->argv[i]->type == ARG_SIMPLE);
+        assert(strcmp(cmd->argv[i]->value.simple, "a") == 0);
     }
 
     assert(cmd->argv[MAX_TOKENS] == NULL);
@@ -587,28 +715,71 @@ void test_parse_pipeline_with_correct_pipeline_without_redirection() {
     assert(pip2->commands[4]->argc == 4);
 
     // Check the correct value of args of commands
-    assert(strcmp(pip1->commands[0]->argv[0], "ls") == 0);
+    assert(pip1->commands[0]->argv != NULL);
+    assert(pip1->commands[0]->argv[0] != NULL);
+    assert(pip1->commands[0]->argv[0]->type == ARG_SIMPLE);
+    assert(strcmp(pip1->commands[0]->argv[0]->value.simple, "ls") == 0);
     assert(pip1->commands[0]->argv[1] == NULL);
-    assert(strcmp(pip1->commands[1]->argv[0], "wc") == 0);
-    assert(strcmp(pip1->commands[1]->argv[1], "-l") == 0);
+    
+
+    assert(pip1->commands[1]->argv != NULL);
+    assert(pip1->commands[1]->argv[0] != NULL);
+    assert(pip1->commands[1]->argv[0]->type == ARG_SIMPLE);
+    assert(strcmp(pip1->commands[1]->argv[0]->value.simple, "wc") == 0);
+    assert(pip1->commands[1]->argv[1] != NULL);
+    assert(pip1->commands[1]->argv[1]->type == ARG_SIMPLE);
+    assert(strcmp(pip1->commands[1]->argv[1]->value.simple, "-l") == 0);
     assert(pip1->commands[1]->argv[2] == NULL);
 
-    assert(strcmp(pip2->commands[0]->argv[0], "cmd1") == 0);
-    assert(strcmp(pip2->commands[0]->argv[1], "arg1") == 0);
+    assert(pip2->commands[0]->argv != NULL);
+    assert(pip2->commands[0]->argv[0] != NULL);
+    assert(pip2->commands[0]->argv[0]->type == ARG_SIMPLE);
+    assert(strcmp(pip2->commands[0]->argv[0]->value.simple, "cmd1") == 0);
+    assert(pip2->commands[0]->argv[1] != NULL);
+    assert(pip2->commands[0]->argv[1]->type == ARG_SIMPLE);
+    assert(strcmp(pip2->commands[0]->argv[1]->value.simple, "arg1") == 0);
     assert(pip2->commands[0]->argv[2] == NULL);
-    assert(strcmp(pip2->commands[1]->argv[0], "cmd2") == 0);
-    assert(strcmp(pip2->commands[1]->argv[1], "arg1") == 0);
-    assert(strcmp(pip2->commands[1]->argv[2], "arg2") == 0);
+
+    assert(pip2->commands[1]->argv != NULL);
+    assert(pip2->commands[1]->argv[0] != NULL);
+    assert(pip2->commands[1]->argv[0]->type == ARG_SIMPLE);
+    assert(strcmp(pip2->commands[1]->argv[0]->value.simple, "cmd2") == 0);
+    assert(pip2->commands[1]->argv[1] != NULL);
+    assert(pip2->commands[1]->argv[1]->type == ARG_SIMPLE);
+    assert(strcmp(pip2->commands[1]->argv[1]->value.simple, "arg1") == 0);
+    assert(pip2->commands[1]->argv[2] != NULL);
+    assert(pip2->commands[1]->argv[2]->type == ARG_SIMPLE);
+    assert(strcmp(pip2->commands[1]->argv[2]->value.simple, "arg2") == 0);
     assert(pip2->commands[1]->argv[3] == NULL);
-    assert(strcmp(pip2->commands[2]->argv[0], "cmd3") == 0);
+
+    assert(pip2->commands[2]->argv != NULL);
+    assert(pip2->commands[2]->argv[0] != NULL);
+    assert(pip2->commands[2]->argv[0]->type == ARG_SIMPLE);
+    assert(strcmp(pip2->commands[2]->argv[0]->value.simple, "cmd3") == 0);
     assert(pip2->commands[2]->argv[1] == NULL);
-    assert(strcmp(pip2->commands[3]->argv[0], "cmd4") == 0);
-    assert(strcmp(pip2->commands[3]->argv[1], "arg1") == 0);
+
+    assert(pip2->commands[3]->argv != NULL);
+    assert(pip2->commands[3]->argv[0] != NULL);
+    assert(pip2->commands[3]->argv[0]->type == ARG_SIMPLE);
+    assert(strcmp(pip2->commands[3]->argv[0]->value.simple, "cmd4") == 0);
+    assert(pip2->commands[3]->argv[1] != NULL);
+    assert(pip2->commands[3]->argv[1]->type == ARG_SIMPLE);
+    assert(strcmp(pip2->commands[3]->argv[1]->value.simple, "arg1") == 0);
     assert(pip2->commands[3]->argv[2] == NULL);
-    assert(strcmp(pip2->commands[4]->argv[0], "cmd5") == 0);
-    assert(strcmp(pip2->commands[4]->argv[1], "arg1") == 0);
-    assert(strcmp(pip2->commands[4]->argv[2], "arg2") == 0);
-    assert(strcmp(pip2->commands[4]->argv[3], "arg3") == 0);
+
+    assert(pip2->commands[4]->argv != NULL);
+    assert(pip2->commands[4]->argv[0] != NULL);
+    assert(pip2->commands[4]->argv[0]->type == ARG_SIMPLE);
+    assert(strcmp(pip2->commands[4]->argv[0]->value.simple, "cmd5") == 0);
+    assert(pip2->commands[4]->argv[1] != NULL);
+    assert(pip2->commands[4]->argv[1]->type == ARG_SIMPLE);
+    assert(strcmp(pip2->commands[4]->argv[1]->value.simple, "arg1") == 0);
+    assert(pip2->commands[4]->argv[2] != NULL);
+    assert(pip2->commands[4]->argv[2]->type == ARG_SIMPLE);
+    assert(strcmp(pip2->commands[4]->argv[2]->value.simple, "arg2") == 0);
+    assert(pip2->commands[4]->argv[3] != NULL);
+    assert(pip2->commands[4]->argv[3]->type == ARG_SIMPLE);
+    assert(strcmp(pip2->commands[4]->argv[3]->value.simple, "arg3") == 0);
     assert(pip2->commands[4]->argv[4] == NULL);
 
     // Check the correct value of to_job
@@ -652,28 +823,70 @@ void test_parse_pipeline_with_correct_pipeline_with_redirection() {
     assert(pip2->commands[4]->argc == 4);
 
     // Check the correct value of args of commands
-    assert(strcmp(pip1->commands[0]->argv[0], "ls") == 0);
+    assert(pip1->commands[0]->argv != NULL);
+    assert(pip1->commands[0]->argv[0] != NULL);
+    assert(pip1->commands[0]->argv[0]->type == ARG_SIMPLE);
+    assert(strcmp(pip1->commands[0]->argv[0]->value.simple, "ls") == 0);
     assert(pip1->commands[0]->argv[1] == NULL);
-    assert(strcmp(pip1->commands[1]->argv[0], "wc") == 0);
-    assert(strcmp(pip1->commands[1]->argv[1], "-l") == 0);
+
+    assert(pip1->commands[1]->argv != NULL);
+    assert(pip1->commands[1]->argv[0] != NULL);
+    assert(pip1->commands[1]->argv[0]->type == ARG_SIMPLE);
+    assert(strcmp(pip1->commands[1]->argv[0]->value.simple, "wc") == 0);
+    assert(pip1->commands[1]->argv[1] != NULL);
+    assert(pip1->commands[1]->argv[1]->type == ARG_SIMPLE);
+    assert(strcmp(pip1->commands[1]->argv[1]->value.simple, "-l") == 0);
     assert(pip1->commands[1]->argv[2] == NULL);
 
-    assert(strcmp(pip2->commands[0]->argv[0], "cmd1") == 0);
-    assert(strcmp(pip2->commands[0]->argv[1], "arg1") == 0);
+    assert(pip2->commands[0]->argv != NULL);
+    assert(pip2->commands[0]->argv[0] != NULL);
+    assert(pip2->commands[0]->argv[0]->type == ARG_SIMPLE);
+    assert(strcmp(pip2->commands[0]->argv[0]->value.simple, "cmd1") == 0);
+    assert(pip2->commands[0]->argv[1] != NULL);
+    assert(pip2->commands[0]->argv[1]->type == ARG_SIMPLE);
+    assert(strcmp(pip2->commands[0]->argv[1]->value.simple, "arg1") == 0);
     assert(pip2->commands[0]->argv[2] == NULL);
-    assert(strcmp(pip2->commands[1]->argv[0], "cmd2") == 0);
-    assert(strcmp(pip2->commands[1]->argv[1], "arg1") == 0);
-    assert(strcmp(pip2->commands[1]->argv[2], "arg2") == 0);
+
+    assert(pip2->commands[1]->argv != NULL);
+    assert(pip2->commands[1]->argv[0] != NULL);
+    assert(pip2->commands[1]->argv[0]->type == ARG_SIMPLE);
+    assert(strcmp(pip2->commands[1]->argv[0]->value.simple, "cmd2") == 0);
+    assert(pip2->commands[1]->argv[1] != NULL);
+    assert(pip2->commands[1]->argv[1]->type == ARG_SIMPLE);
+    assert(strcmp(pip2->commands[1]->argv[1]->value.simple, "arg1") == 0);
+    assert(pip2->commands[1]->argv[2] != NULL);
+    assert(pip2->commands[1]->argv[2]->type == ARG_SIMPLE);
+    assert(strcmp(pip2->commands[1]->argv[2]->value.simple, "arg2") == 0);
     assert(pip2->commands[1]->argv[3] == NULL);
-    assert(strcmp(pip2->commands[2]->argv[0], "cmd3") == 0);
+
+    assert(pip2->commands[2]->argv != NULL);
+    assert(pip2->commands[2]->argv[0] != NULL);
+    assert(pip2->commands[2]->argv[0]->type == ARG_SIMPLE);
+    assert(strcmp(pip2->commands[2]->argv[0]->value.simple, "cmd3") == 0);
     assert(pip2->commands[2]->argv[1] == NULL);
-    assert(strcmp(pip2->commands[3]->argv[0], "cmd4") == 0);
-    assert(strcmp(pip2->commands[3]->argv[1], "arg1") == 0);
+
+    assert(pip2->commands[3]->argv != NULL);
+    assert(pip2->commands[3]->argv[0] != NULL);
+    assert(pip2->commands[3]->argv[0]->type == ARG_SIMPLE);
+    assert(strcmp(pip2->commands[3]->argv[0]->value.simple, "cmd4") == 0);
+    assert(pip2->commands[3]->argv[1] != NULL);
+    assert(pip2->commands[3]->argv[1]->type == ARG_SIMPLE);
+    assert(strcmp(pip2->commands[3]->argv[1]->value.simple, "arg1") == 0);
     assert(pip2->commands[3]->argv[2] == NULL);
-    assert(strcmp(pip2->commands[4]->argv[0], "cmd5") == 0);
-    assert(strcmp(pip2->commands[4]->argv[1], "arg1") == 0);
-    assert(strcmp(pip2->commands[4]->argv[2], "arg2") == 0);
-    assert(strcmp(pip2->commands[4]->argv[3], "arg3") == 0);
+
+    assert(pip2->commands[4]->argv != NULL);
+    assert(pip2->commands[4]->argv[0] != NULL);
+    assert(pip2->commands[4]->argv[0]->type == ARG_SIMPLE);
+    assert(strcmp(pip2->commands[4]->argv[0]->value.simple, "cmd5") == 0);
+    assert(pip2->commands[4]->argv[1] != NULL);
+    assert(pip2->commands[4]->argv[1]->type == ARG_SIMPLE);
+    assert(strcmp(pip2->commands[4]->argv[1]->value.simple, "arg1") == 0);
+    assert(pip2->commands[4]->argv[2] != NULL);
+    assert(pip2->commands[4]->argv[2]->type == ARG_SIMPLE);
+    assert(strcmp(pip2->commands[4]->argv[2]->value.simple, "arg2") == 0);
+    assert(pip2->commands[4]->argv[3] != NULL);
+    assert(pip2->commands[4]->argv[3]->type == ARG_SIMPLE);
+    assert(strcmp(pip2->commands[4]->argv[3]->value.simple, "arg3") == 0);
     assert(pip2->commands[4]->argv[4] == NULL);
 
     // Check the correct number of redirections of commands
@@ -1054,8 +1267,16 @@ void test_parser_command_with_redirections() {
     assert(cmd->argc == 2);
 
     // Check if the arguments are correct
-    assert(strcmp(cmd->argv[0], "ls") == 0);
-    assert(strcmp(cmd->argv[1], "-l") == 0);
+    assert(cmd->argv != NULL);
+
+    assert(cmd->argv[0] != NULL);
+    assert(cmd->argv[0]->type == ARG_SIMPLE);
+    assert(strcmp(cmd->argv[0]->value.simple, "ls") == 0);
+
+    assert(cmd->argv[1] != NULL);
+    assert(cmd->argv[1]->type == ARG_SIMPLE);
+    assert(strcmp(cmd->argv[1]->value.simple, "-l") == 0);
+
     assert(cmd->argv[2] == NULL);
 
     // Check the correct number of redirections
@@ -1083,10 +1304,24 @@ void test_parser_command_with_various_redirections() {
     assert(cmd->argc == 4);
 
     // Check if the arguments are correct
-    assert(strcmp(cmd->argv[0], "ls") == 0);
-    assert(strcmp(cmd->argv[1], "-l") == 0);
-    assert(strcmp(cmd->argv[2], "fic") == 0);
-    assert(strcmp(cmd->argv[3], "bar") == 0);
+    assert(cmd->argv != NULL);
+    
+    assert(cmd->argv[0] != NULL);
+    assert(cmd->argv[0]->type == ARG_SIMPLE);
+    assert(strcmp(cmd->argv[0]->value.simple, "ls") == 0);
+
+    assert(cmd->argv[1] != NULL);
+    assert(cmd->argv[1]->type == ARG_SIMPLE);
+    assert(strcmp(cmd->argv[1]->value.simple, "-l") == 0);
+
+    assert(cmd->argv[2] != NULL);
+    assert(cmd->argv[2]->type == ARG_SIMPLE);
+    assert(strcmp(cmd->argv[2]->value.simple, "fic") == 0);
+
+    assert(cmd->argv[3] != NULL);
+    assert(cmd->argv[3]->type == ARG_SIMPLE);
+    assert(strcmp(cmd->argv[3]->value.simple, "bar") == 0);
+
     assert(cmd->argv[4] == NULL);
 
     // Check the correct number of redirections
@@ -1135,9 +1370,21 @@ void test_parser_command_with_correct_but_weird_redirections() {
     assert(cmd->argc == 3);
 
     // Check if the arguments are correct
-    assert(strcmp(cmd->argv[0], "ls") == 0);
-    assert(strcmp(cmd->argv[1], "-l") == 0);
-    assert(strcmp(cmd->argv[2], "fic") == 0);
+    assert(cmd->argv != NULL);
+
+    assert(cmd->argv[0] != NULL);
+    assert(cmd->argv[0]->type == ARG_SIMPLE);
+    assert(strcmp(cmd->argv[0]->value.simple, "ls") == 0);
+
+    assert(cmd->argv[1] != NULL);
+    assert(cmd->argv[1]->type == ARG_SIMPLE);
+    assert(strcmp(cmd->argv[1]->value.simple, "-l") == 0);
+
+    assert(cmd->argv[2] != NULL);
+    assert(cmd->argv[2]->type == ARG_SIMPLE);
+    assert(strcmp(cmd->argv[2]->value.simple, "fic") == 0);
+
+    assert(cmd->argv[3] == NULL);
 
     // Check the correct number of redirections
     assert(cmd->redirection_count == 2);
@@ -1168,11 +1415,29 @@ void test_parser_command_with_redirections_and_misleading_arguments() {
     assert(cmd->argc == 5);
 
     // Check if the arguments are correct
-    assert(strcmp(cmd->argv[0], "ls") == 0);
-    assert(strcmp(cmd->argv[1], "-l") == 0);
-    assert(strcmp(cmd->argv[2], "bar") == 0);
-    assert(strcmp(cmd->argv[3], "fic") == 0);
-    assert(strcmp(cmd->argv[4], "bar") == 0);
+    assert(cmd->argv != NULL);
+
+    assert(cmd->argv[0] != NULL);
+    assert(cmd->argv[0]->type == ARG_SIMPLE);
+    assert(strcmp(cmd->argv[0]->value.simple, "ls") == 0);
+
+    assert(cmd->argv[1] != NULL);
+    assert(cmd->argv[1]->type == ARG_SIMPLE);
+    assert(strcmp(cmd->argv[1]->value.simple, "-l") == 0);
+
+    assert(cmd->argv[2] != NULL);
+    assert(cmd->argv[2]->type == ARG_SIMPLE);
+    assert(strcmp(cmd->argv[2]->value.simple, "bar") == 0);
+
+    assert(cmd->argv[3] != NULL);
+    assert(cmd->argv[3]->type == ARG_SIMPLE);
+    assert(strcmp(cmd->argv[3]->value.simple, "fic") == 0);
+
+    assert(cmd->argv[4] != NULL);
+    assert(cmd->argv[4]->type == ARG_SIMPLE);
+    assert(strcmp(cmd->argv[4]->value.simple, "bar") == 0);
+
+    assert(cmd->argv[5] == NULL);
 
     // Check the correct number of redirections
     assert(cmd->redirection_count == 5);
@@ -1543,4 +1808,409 @@ void test_str_of_pipeline_with_pipes() {
     // Clean up
     free_pipeline(pip);
     free(strpip);
+}
+
+void test_parse_pipeline_with_pipe_substitutions() {
+    // Set up
+    char *input = "cat <(cat foo | grep bar <(cat baz)) 2> bar";
+    pipeline *pip = parse_pipeline(input, false);
+
+    // Check if the pipeline is NULL
+    assert(pip != NULL);
+
+    // Check the correct number of commands
+    assert(pip->command_count == 1);
+
+    // Call the command to test
+    command *cmd = pip->commands[0];
+
+    // Check the correct command name
+    assert(strcmp(cmd->name, "cat") == 0);
+
+    // Check the correct number of args of command
+    assert(cmd->argc == 2);
+
+    // Check if the arguments are correct
+    assert(cmd->argv != NULL);
+    
+    assert(cmd->argv[0] != NULL);
+    assert(cmd->argv[0]->type == ARG_SIMPLE);
+    assert(strcmp(cmd->argv[0]->value.simple, "cat") == 0);
+
+    assert(cmd->argv[1] != NULL);
+    assert(cmd->argv[1]->type == ARG_SUBSTITUTION);
+    pipeline *subpip = cmd->argv[1]->value.substitution;
+
+    // Check if the pipeline is NULL
+    assert(subpip != NULL);
+
+    // Check the correct number of commands
+    assert(subpip->command_count == 2);
+
+    // Call the command to test
+    command *subcmd1 = subpip->commands[0];
+
+    // Check the correct command name
+    assert(strcmp(subcmd1->name, "cat") == 0);
+
+    // Check the correct number of args of command
+    assert(subcmd1->argc == 2);
+
+    // Check if the arguments are correct
+    assert(subcmd1->argv != NULL);
+
+    assert(subcmd1->argv[0] != NULL);
+    assert(subcmd1->argv[0]->type == ARG_SIMPLE);
+    assert(strcmp(subcmd1->argv[0]->value.simple, "cat") == 0);
+
+    assert(subcmd1->argv[1] != NULL);
+    assert(subcmd1->argv[1]->type == ARG_SIMPLE);
+    assert(strcmp(subcmd1->argv[1]->value.simple, "foo") == 0);
+
+    assert(subcmd1->argv[2] == NULL);
+
+    // Call the command to test
+    command *subcmd2 = subpip->commands[1];
+
+    // Check the correct command name
+    assert(strcmp(subcmd2->name, "grep") == 0);
+
+    // Check the correct number of args of command
+    assert(subcmd2->argc == 3);
+
+    // Check if the arguments are correct
+    assert(subcmd2->argv != NULL);
+
+    assert(subcmd2->argv[0] != NULL);
+    assert(subcmd2->argv[0]->type == ARG_SIMPLE);
+    assert(strcmp(subcmd2->argv[0]->value.simple, "grep") == 0);
+
+    assert(subcmd2->argv[1] != NULL);
+    assert(subcmd2->argv[1]->type == ARG_SIMPLE);
+    assert(strcmp(subcmd2->argv[1]->value.simple, "bar") == 0);
+
+    assert(subcmd2->argv[2] != NULL);
+    assert(subcmd2->argv[2]->type == ARG_SUBSTITUTION);
+    pipeline *subpip2 = subcmd2->argv[2]->value.substitution;
+
+    // Check if the pipeline is NULL
+    assert(subpip2 != NULL);
+
+    // Check the correct number of commands
+    assert(subpip2->command_count == 1);
+
+    // Call the command to test
+    command *subcmd3 = subpip2->commands[0];
+
+    // Check the correct command name
+    assert(strcmp(subcmd3->name, "cat") == 0);
+
+    // Check the correct number of args of command
+    assert(subcmd3->argc == 2);
+
+    // Check if the arguments are correct
+    assert(subcmd3->argv != NULL);
+    
+    assert(subcmd3->argv[0] != NULL);
+    assert(subcmd3->argv[0]->type == ARG_SIMPLE);
+    assert(strcmp(subcmd3->argv[0]->value.simple, "cat") == 0);
+
+    assert(subcmd3->argv[1] != NULL);
+    assert(subcmd3->argv[1]->type == ARG_SIMPLE);
+    assert(strcmp(subcmd3->argv[1]->value.simple, "baz") == 0);
+
+    assert(subcmd3->argv[2] == NULL);
+
+    // Check the correct number of redirections
+    assert(cmd->redirection_count == 1);
+
+    // Check if the redirections are correct
+    assert(cmd->redirections[0].type == REDIRECT_STDERR);
+    assert(cmd->redirections[0].mode == REDIRECT_NO_OVERWRITE);
+    assert(strcmp(cmd->redirections[0].filename, "bar") == 0);
+
+    // Clean up
+    free_pipeline(pip);
+}
+
+void test_parse_pipeline_with_multiple_pipe_substitutions() {
+    
+    // Set up
+    char *input = "cat <(cat foo) <(cat baz)";
+    pipeline *pip = parse_pipeline(input, false);
+
+    // Check if the pipeline is NULL
+    assert(pip != NULL);
+
+    // Check the correct number of commands
+    assert(pip->command_count == 1);
+
+    // Call the command to test
+    command *cmd = pip->commands[0];
+
+    // Check the correct command name
+    assert(strcmp(cmd->name, "cat") == 0);
+
+    // Check the correct number of args of command
+    assert(cmd->argc == 3);
+
+    // Check if the arguments are correct
+    assert(cmd->argv != NULL);
+
+    assert(cmd->argv[0] != NULL);
+    assert(cmd->argv[0]->type == ARG_SIMPLE);
+    assert(strcmp(cmd->argv[0]->value.simple, "cat") == 0);
+
+    assert(cmd->argv[1] != NULL);
+    assert(cmd->argv[1]->type == ARG_SUBSTITUTION);
+    pipeline *subpip1 = cmd->argv[1]->value.substitution;
+
+    // Check if the pipeline is NULL
+    assert(subpip1 != NULL);
+
+    // Check the correct number of commands
+    assert(subpip1->command_count == 1);
+
+    // Call the command to test
+    command *subcmd1 = subpip1->commands[0];
+
+    // Check the correct command name
+    assert(strcmp(subcmd1->name, "cat") == 0);
+
+    // Check the correct number of args of command
+    assert(subcmd1->argc == 2);
+
+    // Check if the arguments are correct
+    assert(subcmd1->argv != NULL);
+
+    assert(subcmd1->argv[0] != NULL);
+    assert(subcmd1->argv[0]->type == ARG_SIMPLE);
+    assert(strcmp(subcmd1->argv[0]->value.simple, "cat") == 0);
+
+    assert(subcmd1->argv[1] != NULL);
+    assert(subcmd1->argv[1]->type == ARG_SIMPLE);
+    assert(strcmp(subcmd1->argv[1]->value.simple, "foo") == 0);
+
+    assert(subcmd1->argv[2] == NULL);
+
+    assert(cmd->argv[2] != NULL);
+    assert(cmd->argv[2]->type == ARG_SUBSTITUTION);
+    pipeline *subpip2 = cmd->argv[2]->value.substitution;
+
+    // Check if the pipeline is NULL
+    assert(subpip2 != NULL);
+
+    // Check the correct number of commands
+    assert(subpip2->command_count == 1);
+
+    // Call the command to test
+    command *subcmd2 = subpip2->commands[0];
+
+    // Check the correct command name
+    assert(strcmp(subcmd2->name, "cat") == 0);
+
+    // Check the correct number of args of command
+    assert(subcmd2->argc == 2);
+
+    // Check if the arguments are correct
+    assert(subcmd2->argv != NULL);
+
+    assert(subcmd2->argv[0] != NULL);
+    assert(subcmd2->argv[0]->type == ARG_SIMPLE);
+    assert(strcmp(subcmd2->argv[0]->value.simple, "cat") == 0);
+
+    assert(subcmd2->argv[1] != NULL);
+    assert(subcmd2->argv[1]->type == ARG_SIMPLE);
+    assert(strcmp(subcmd2->argv[1]->value.simple, "baz") == 0);
+
+    assert(subcmd2->argv[2] == NULL);
+
+    // Clean up
+    free_pipeline(pip);
+}
+
+void test_parse_pipeline_list_with_pipes_substitutions() {
+    
+    // Set up
+    char *input = "cat <(cat foo | grep bar <(cat baz)) 2> bar &";
+    pipeline_list *pips = parse_pipeline_list(input);
+
+    // Check if the pipelines of the list is not NULL
+    assert(pips->pipelines != NULL);
+
+    // Check the correct number of pipelines
+    assert(pips->pipeline_count == 1);
+
+    // Call the pipeline to test
+    pipeline *pip = pips->pipelines[0];
+
+    // Check if the pipeline has to_job
+    assert(pip->to_job);
+
+    // Check if the pipeline is NULL
+    assert(pip != NULL);
+
+    // Check the correct number of commands
+    assert(pip->command_count == 1);
+
+    // Call the command to test
+    command *cmd = pip->commands[0];
+
+    // Check the correct command name
+    assert(strcmp(cmd->name, "cat") == 0);
+
+    // Check the correct number of args of command
+    assert(cmd->argc == 2);
+
+    // Check if the arguments are correct
+    assert(cmd->argv != NULL);
+    
+    assert(cmd->argv[0] != NULL);
+    assert(cmd->argv[0]->type == ARG_SIMPLE);
+    assert(strcmp(cmd->argv[0]->value.simple, "cat") == 0);
+
+    assert(cmd->argv[1] != NULL);
+    assert(cmd->argv[1]->type == ARG_SUBSTITUTION);
+    pipeline *subpip = cmd->argv[1]->value.substitution;
+
+    // Check if the pipeline is NULL
+    assert(subpip != NULL);
+
+    // Check the correct number of commands
+    assert(subpip->command_count == 2);
+
+    // Call the command to test
+    command *subcmd1 = subpip->commands[0];
+
+    // Check the correct command name
+    assert(strcmp(subcmd1->name, "cat") == 0);
+
+    // Check the correct number of args of command
+    assert(subcmd1->argc == 2);
+
+    // Check if the arguments are correct
+    assert(subcmd1->argv != NULL);
+
+    assert(subcmd1->argv[0] != NULL);
+    assert(subcmd1->argv[0]->type == ARG_SIMPLE);
+    assert(strcmp(subcmd1->argv[0]->value.simple, "cat") == 0);
+
+    assert(subcmd1->argv[1] != NULL);
+    assert(subcmd1->argv[1]->type == ARG_SIMPLE);
+    assert(strcmp(subcmd1->argv[1]->value.simple, "foo") == 0);
+
+    assert(subcmd1->argv[2] == NULL);
+
+    // Call the command to test
+    command *subcmd2 = subpip->commands[1];
+
+    // Check the correct command name
+    assert(strcmp(subcmd2->name, "grep") == 0);
+
+    // Check the correct number of args of command
+    assert(subcmd2->argc == 3);
+
+    // Check if the arguments are correct
+    assert(subcmd2->argv != NULL);
+
+    assert(subcmd2->argv[0] != NULL);
+    assert(subcmd2->argv[0]->type == ARG_SIMPLE);
+    assert(strcmp(subcmd2->argv[0]->value.simple, "grep") == 0);
+
+    assert(subcmd2->argv[1] != NULL);
+    assert(subcmd2->argv[1]->type == ARG_SIMPLE);
+    assert(strcmp(subcmd2->argv[1]->value.simple, "bar") == 0);
+
+    assert(subcmd2->argv[2] != NULL);
+    assert(subcmd2->argv[2]->type == ARG_SUBSTITUTION);
+    pipeline *subpip2 = subcmd2->argv[2]->value.substitution;
+
+    // Check if the pipeline is NULL
+    assert(subpip2 != NULL);
+
+    // Check the correct number of commands
+    assert(subpip2->command_count == 1);
+
+    // Call the command to test
+    command *subcmd3 = subpip2->commands[0];
+
+    // Check the correct command name
+    assert(strcmp(subcmd3->name, "cat") == 0);
+
+    // Check the correct number of args of command
+    assert(subcmd3->argc == 2);
+
+    // Check if the arguments are correct
+    assert(subcmd3->argv != NULL);
+    
+    assert(subcmd3->argv[0] != NULL);
+    assert(subcmd3->argv[0]->type == ARG_SIMPLE);
+    assert(strcmp(subcmd3->argv[0]->value.simple, "cat") == 0);
+
+    assert(subcmd3->argv[1] != NULL);
+    assert(subcmd3->argv[1]->type == ARG_SIMPLE);
+    assert(strcmp(subcmd3->argv[1]->value.simple, "baz") == 0);
+
+    assert(subcmd3->argv[2] == NULL);
+
+    // Check the correct number of redirections
+    assert(cmd->redirection_count == 1);
+
+    // Check if the redirections are correct
+    assert(cmd->redirections[0].type == REDIRECT_STDERR);
+    assert(cmd->redirections[0].mode == REDIRECT_NO_OVERWRITE);
+    assert(strcmp(cmd->redirections[0].filename, "bar") == 0);
+
+    // Clean up
+    free_pipeline_list(pips);
+}
+
+void test_invalid_pipe_substitution1() {
+    
+    // Set up
+    char *input = "grep <( sort <( cat file1 | uniq";
+    pipeline *pip = parse_pipeline(input, false);
+
+    // Check if the pipeline is NULL
+    assert(pip == NULL);
+}
+
+void test_invalid_pipe_substitution2() {
+    
+    // Set up
+    char *input = "wc -l <( | grep 'pattern')";
+    pipeline *pip = parse_pipeline(input, false);
+
+    // Check if the pipeline is NULL
+    assert(pip == NULL);
+}
+
+void test_invalid_pipe_substitution3() {
+    
+    // Set up
+    char *input = "<( cat <( sort file1 ) )";
+    pipeline *pip = parse_pipeline(input, false);
+
+    // Check if the pipeline is NULL
+    assert(pip == NULL);
+}
+
+void test_invalid_pipe_substitution4() {
+
+    // Set up
+    char *input = "cat <( )";
+    pipeline *pip = parse_pipeline(input, false);
+
+    // Check if the pipeline is NULL
+    assert(pip == NULL);
+}
+
+void test_invalid_pipe_substitution5() {
+
+    // Set up
+    char *input = "cat <()";
+    pipeline *pip = parse_pipeline(input, false);
+
+    // Check if the pipeline is NULL
+    assert(pip == NULL);
 }
