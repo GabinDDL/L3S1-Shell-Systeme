@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <time.h>
@@ -108,36 +109,26 @@ int run_command_without_redirections(const command_without_substitution *cmd_wit
     }
 
     if (strcmp(cmd_without_subst->argv[0], "pwd") == 0) {
-        reset_signal_management();
         return_value = pwd(cmd_without_subst);
-        use_jsh_signal_management();
     } else if (strcmp(cmd_without_subst->argv[0], "cd") == 0) {
-        reset_signal_management();
         int cd_output = cd(cmd_without_subst);
-        use_jsh_signal_management();
         update_prompt();
         return_value = cd_output;
     } else if (strcmp(cmd_without_subst->argv[0], "exit") == 0) {
-        reset_signal_management();
         return_value = exit_jsh(cmd_without_subst);
-        use_jsh_signal_management();
     } else if (strcmp(cmd_without_subst->argv[0], "?") == 0) {
-        reset_signal_management();
         return_value = print_last_command_result(cmd_without_subst);
-        use_jsh_signal_management();
     } else if (strcmp(cmd_without_subst->argv[0], "jobs") == 0) {
-        reset_signal_management();
         return_value = print_jobs(cmd_without_subst);
-        use_jsh_signal_management();
     } else if (strcmp(cmd_without_subst->argv[0], "kill") == 0) {
-        reset_signal_management();
         return_value = jsh_kill(cmd_without_subst);
-        use_jsh_signal_management();
+    } else if (strcmp(cmd_without_subst->argv[0], "bg") == 0) {
+        return_value = bg(cmd_without_subst);
+    } else if (strcmp(cmd_without_subst->argv[0], "fg") == 0) {
+        return_value = fg(cmd_without_subst);
     } else {
         if (already_forked) {
-            reset_signal_management();
             return_value = extern_command(cmd_without_subst);
-            use_jsh_signal_management();
         } else {
             int status; // status of the created process
             pid_t pid = fork();
@@ -157,14 +148,14 @@ int run_command_without_redirections(const command_without_substitution *cmd_wit
                 break;
             default:
                 setpgid(pid, pid);
+                pid_t pgid = getpgid(pid);
                 tcsetpgrp(STDERR_FILENO, getpgid(pid));
                 waitpid(pid, &status, WUNTRACED);
                 if (WIFSTOPPED(status)) {
-                    setpgid(pid, pid);
                     pip->to_job = true;
-                    add_new_forked_process_to_jobs(pid, pip, STOPPED);
+                    add_new_forked_process_to_jobs(pgid, pid, pip, STOPPED);
                 }
-                tcsetpgrp(STDERR_FILENO, getpgid(0));
+                tcsetpgrp(STDERR_FILENO, getpgrp());
                 return WEXITSTATUS(status);
             }
         }
@@ -361,6 +352,7 @@ int run_commands_of_pipeline(pipeline *pip, int fd_out) {
     dup2(tubes[0][1], STDOUT_FILENO);
     close(tubes[0][1]);
 
+    free_tubes(tubes, pip->command_count - 1);
     run_output = run_command(pip->commands[0], pip->to_job, pip);
 
     dup2(stdout_copy, STDOUT_FILENO);
@@ -368,7 +360,6 @@ int run_commands_of_pipeline(pipeline *pip, int fd_out) {
     for (size_t i = 0; i < pip->command_count - 1; i++) {
         waitpid(pids[i], NULL, 0);
     }
-    free_tubes(tubes, pip->command_count - 1);
 
     return run_output;
 }
@@ -402,7 +393,8 @@ int run_pipeline(pipeline *pip) {
             }
         } else {
             setpgid(pid, pid);
-            run_output = add_new_forked_process_to_jobs(pid, pip, RUNNING);
+            pid_t pgid = getpgid(pid);
+            run_output = add_new_forked_process_to_jobs(pgid, pid, pip, RUNNING);
             if (pip->command_count > 1) {
                 pid_t *pids = malloc((pip->command_count - 1) * sizeof(pid_t));
                 int res = read(tube_process[0], pids, sizeof(pid_t) * (pip->command_count - 1));
@@ -413,7 +405,7 @@ int run_pipeline(pipeline *pip) {
                 unsigned job_id = jobs[job_number - 1]->id;
 
                 for (size_t i = 0; i < pip->command_count - 1; i++) {
-                    setpgid(pids[i], getpgid(pid));
+                    setpgid(pids[i], pgid);
                     add_process_to_job(job_id, pids[i], pip->commands[i + 1], RUNNING);
                 }
                 free(pids);

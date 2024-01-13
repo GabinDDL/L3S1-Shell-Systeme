@@ -73,10 +73,10 @@ char *simple_str_of_job(job *j, bool new) {
     }
 
     result_length = strlen(format) + strlen(status) + strlen(pipeline) + get_nb_of_digits(j->id) +
-                    get_nb_of_digits(j->pid) - FORMAT_SPECIFIERS_CHARACTERS_COUNT;
+                    get_nb_of_digits(j->pid_leader) - FORMAT_SPECIFIERS_CHARACTERS_COUNT;
 
     result = malloc(result_length * sizeof(char));
-    snprintf(result, result_length, format, j->id, j->pid, status, pipeline);
+    snprintf(result, result_length, format, j->id, j->pid_leader, status, pipeline);
 
     free(format);
     free(status);
@@ -111,13 +111,14 @@ unsigned get_id_new_job() {
     return id;
 }
 
-job *init_job_to_add(pid_t pid, pipeline *pip, Status s) {
+job *init_job_to_add(pid_t pgid, pid_t pid, pipeline *pip, Status s) {
     unsigned id = get_id_new_job();
 
     job *new_job = malloc(sizeof(job));
 
     assert(new_job != NULL);
-    new_job->pid = pid;
+    new_job->pgid = pgid;
+    new_job->pid_leader = pid;
     new_job->status = s;
     new_job->id = id;
     new_job->pipeline = pip;
@@ -171,8 +172,8 @@ int add_job_to_jobs(job *j) {
     return SUCCESS;
 }
 
-int add_new_forked_process_to_jobs(pid_t pid, pipeline *pip, Status s) {
-    job *new_job = init_job_to_add(pid, pip, s);
+int add_new_forked_process_to_jobs(pid_t pgid, pid_t pid, pipeline *pip, Status s) {
+    job *new_job = init_job_to_add(pgid, pid, pip, s);
 
     if (new_job == NULL) {
         return EXIT_FAILURE;
@@ -256,7 +257,7 @@ int update_status_of_process(process *p) {
 
 int update_status_of_job(job *j) {
     int status;
-    int res = waitpid(j->pid, &status, WNOHANG | WUNTRACED | WCONTINUED);
+    int res = waitpid(j->pid_leader, &status, WNOHANG | WUNTRACED | WCONTINUED);
 
     if (res < 0) {
         assert(errno == ECHILD);
@@ -269,6 +270,7 @@ int update_status_of_job(job *j) {
             j->status = KILLED;
         } else if (WIFSTOPPED(status)) {
             j->status = STOPPED;
+            print_job(j, false);
         } else if (WIFCONTINUED(status)) {
             j->status = RUNNING;
             print_job(j, false);

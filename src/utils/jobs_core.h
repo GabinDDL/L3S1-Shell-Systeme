@@ -17,7 +17,8 @@ typedef struct process {
 
 typedef struct job {
     unsigned id;
-    pid_t pid;
+    pid_t pgid;
+    pid_t pid_leader;
     Status status;
     pipeline *pipeline;
     process **job_process;
@@ -40,6 +41,11 @@ char *simple_str_of_job(job *, bool);
  * in which case there is less spaces than usual
  */
 
+void print_job(job *, bool);
+/**
+ * Print the job, and add '+' if it's a new one
+ */
+
 void free_jobs_core();
 /* Free allocation of all jobs and their pipelines */
 
@@ -53,7 +59,7 @@ int get_jobs_placement_with_id(unsigned);
 int add_job_to_jobs(job *);
 /* Adds a new job to the job list, and returns SUCCESS if the command succeeds */
 
-int add_new_forked_process_to_jobs(pid_t, pipeline *, Status);
+int add_new_forked_process_to_jobs(pid_t, pid_t, pipeline *, Status);
 /* Adds a new fork with the pipeline to the job list, and returns SUCCESS if the command succeeds */
 
 int add_process_to_job(unsigned, pid_t, command *, Status);

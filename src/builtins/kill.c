@@ -10,7 +10,7 @@
 int kill_job(int job_id, int signal) {
     for (size_t i = 0; i < job_number; ++i) {
         if ((*(jobs + i))->id == job_id) {
-            if (killpg(getpgid((*(jobs + i))->pid), signal) == -1) {
+            if (killpg((*(jobs + i))->pgid, signal) == -1) {
                 print_error("kill: an error occured");
                 return COMMAND_FAILURE;
             }
