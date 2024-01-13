@@ -301,7 +301,7 @@ int **init_tubes(size_t n) {
     return tubes;
 }
 
-void close_fd_of_tubes_except(int **tubes, size_t s, unsigned rd, unsigned wr) {
+void close_fd_of_tubes_except(int **tubes, size_t s, int rd, int wr) {
     for (size_t i = 0; i < s; i++) {
         if (i != rd) {
             close(tubes[i][0]);
@@ -325,15 +325,15 @@ int run_commands_of_pipeline(pipeline *pip, int fd_out) {
     pid_t pids[pip->command_count - 1];
     int **tubes = init_tubes(pip->command_count - 1);
 
-    for (size_t i = 1; i < pip->command_count; i++) {
-        pids[i - 1] = fork();
-        if (pids[i - 1] == 0) {
+    for (int i = 0; i < pip->command_count - 1; i++) {
+        pids[i] = fork();
+        if (pids[i] == 0) {
             close_fd_of_tubes_except(tubes, pip->command_count - 1, i - 1, i);
-            dup2(tubes[i - 1][0], STDIN_FILENO);
-            close(tubes[i - 1][0]);
-            if (i < pip->command_count - 1) {
-                dup2(tubes[i][1], STDOUT_FILENO);
-                close(tubes[i][1]);
+            dup2(tubes[i][1], STDOUT_FILENO);
+            close(tubes[i][1]);
+            if (i != 0) {
+                dup2(tubes[i - 1][0], STDIN_FILENO);
+                close(tubes[i - 1][0]);
             }
             run_output = run_command(pip->commands[i], true, pip);
 
@@ -346,17 +346,17 @@ int run_commands_of_pipeline(pipeline *pip, int fd_out) {
         close(fd_out);
     }
 
-    close_fd_of_tubes_except(tubes, pip->command_count - 1, pip->command_count, 0);
+    close_fd_of_tubes_except(tubes, pip->command_count - 1, pip->command_count - 2, pip->command_count);
 
-    int stdout_copy = dup(STDOUT_FILENO);
-    dup2(tubes[0][1], STDOUT_FILENO);
-    close(tubes[0][1]);
+    int stdin_copy = dup(STDIN_FILENO);
+    dup2(tubes[pip->command_count - 2][0], STDIN_FILENO);
+    close(tubes[pip->command_count - 2][0]);
 
     free_tubes(tubes, pip->command_count - 1);
-    run_output = run_command(pip->commands[0], pip->to_job, pip);
+    run_output = run_command(pip->commands[pip->command_count - 1], pip->to_job, pip);
 
-    dup2(stdout_copy, STDOUT_FILENO);
-    close(stdout_copy);
+    dup2(stdin_copy, STDIN_FILENO);
+    close(stdin_copy);
     for (size_t i = 0; i < pip->command_count - 1; i++) {
         waitpid(pids[i], NULL, 0);
     }
