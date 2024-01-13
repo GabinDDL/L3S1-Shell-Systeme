@@ -73,10 +73,10 @@ char *simple_str_of_job(job *j, bool new) {
     }
 
     result_length = strlen(format) + strlen(status) + strlen(pipeline) + get_nb_of_digits(j->id) +
-                    get_nb_of_digits(j->pid_leader) - FORMAT_SPECIFIERS_CHARACTERS_COUNT;
+                    get_nb_of_digits(j->pgid) - FORMAT_SPECIFIERS_CHARACTERS_COUNT;
 
     result = malloc(result_length * sizeof(char));
-    snprintf(result, result_length, format, j->id, j->pid_leader, status, pipeline);
+    snprintf(result, result_length, format, j->id, j->pgid, status, pipeline);
 
     free(format);
     free(status);

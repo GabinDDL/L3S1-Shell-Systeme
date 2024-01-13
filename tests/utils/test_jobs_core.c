@@ -189,6 +189,7 @@ void test_simple_str_of_job_new_job_running() {
     job *jb = malloc(sizeof(job));
     jb->id = 1;
     jb->pid_leader = 12345;
+    jb->pgid = 12345;
     jb->status = RUNNING;
     jb->job_process = NULL;
     char *input = "sleep 500";
@@ -212,6 +213,7 @@ void test_simple_str_of_job_old_job_detached() {
     job *jb = malloc(sizeof(job));
     jb->id = 1;
     jb->pid_leader = 12345;
+    jb->pgid = 12345;
     jb->status = DETACHED;
     jb->job_process = NULL;
     char *input = "sleep 500";
@@ -236,6 +238,7 @@ void test_simple_str_of_job_old_job_stopped() {
     job *jb = malloc(sizeof(job));
     jb->id = 10;
     jb->pid_leader = 4234;
+    jb->pgid = 4234;
     jb->status = STOPPED;
     jb->job_process = NULL;
     char *input = "wc -l fic1 > /tmp/tutu";
@@ -259,6 +262,7 @@ void test_simple_str_of_job_old_job_running() {
     job *jb = malloc(sizeof(job));
     jb->id = 4;
     jb->pid_leader = 591141;
+    jb->pgid = 591141;
     jb->status = RUNNING;
     jb->job_process = NULL;
     char *input = "wc -l fic1 > /tmp/tutu";
@@ -282,6 +286,7 @@ void test_simple_str_of_job_old_job_killed() {
     job *jb = malloc(sizeof(job));
     jb->id = 213;
     jb->pid_leader = 546;
+    jb->pgid = 546;
     jb->status = KILLED;
     jb->job_process = NULL;
     char *input = "wc -l fic1 > /tmp/tutu";
@@ -305,6 +310,7 @@ void test_simple_str_of_job_old_job_done() {
     job *jb = malloc(sizeof(job));
     jb->id = 0;
     jb->pid_leader = 10000;
+    jb->pgid = 10000;
     jb->status = DONE;
     jb->job_process = NULL;
     char *input = "wc -l fic1 > /tmp/tutu";
@@ -328,6 +334,7 @@ void test_simple_str_of_job_new_job_running_with_pipe() {
     job *jb = malloc(sizeof(job));
     jb->id = 1;
     jb->pid_leader = 12345;
+    jb->pgid = 12345;
     jb->status = RUNNING;
     jb->job_process = NULL;
     char *input = "./a.out | wc -l > /tmp/tutu";
@@ -351,6 +358,7 @@ void test_simple_str_of_job_old_job_detached_with_pipe() {
     job *jb = malloc(sizeof(job));
     jb->id = 1;
     jb->pid_leader = 12345;
+    jb->pgid = 12345;
     jb->status = DETACHED;
     jb->job_process = NULL;
     char *input = "./a.out | wc -l > /tmp/tutu";
@@ -375,6 +383,7 @@ void test_simple_str_of_job_old_job_stopped_with_pipe() {
     job *jb = malloc(sizeof(job));
     jb->id = 10;
     jb->pid_leader = 4234;
+    jb->pgid = 4234;
     jb->status = STOPPED;
     jb->job_process = NULL;
     char *input = "./a.out | wc -l > /tmp/tutu";
@@ -398,6 +407,7 @@ void test_simple_str_of_job_old_job_running_with_pipe() {
     job *jb = malloc(sizeof(job));
     jb->id = 4;
     jb->pid_leader = 591141;
+    jb->pgid = 591141;
     jb->status = RUNNING;
     jb->job_process = NULL;
     char *input = "./a.out | wc -l > /tmp/tutu";
@@ -421,6 +431,7 @@ void test_simple_str_of_job_old_job_killed_with_pipe() {
     job *jb = malloc(sizeof(job));
     jb->id = 213;
     jb->pid_leader = 546;
+    jb->pgid = 546;
     jb->status = KILLED;
     jb->job_process = NULL;
     char *input = "./a.out | wc -l > /tmp/tutu";
@@ -444,6 +455,7 @@ void test_simple_str_of_job_old_job_done_with_pipe() {
     job *jb = malloc(sizeof(job));
     jb->id = 0;
     jb->pid_leader = 10000;
+    jb->pgid = 10000;
     jb->status = DONE;
     jb->job_process = NULL;
     char *input = "./a.out | wc -l > /tmp/tutu";
