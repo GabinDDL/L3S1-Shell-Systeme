@@ -48,7 +48,7 @@ char *str_of_command(const command *cmd) {
             result_length += strlen(cmd->argv[i]->value.simple);
         } else {
             result_length += strlen(str_of_pipeline(cmd->argv[i]->value.substitution));
-            result_length += 3; // For the `<(` and `)` characters
+            result_length += 5; // For the `<(` and `)` characters
         }
 
         if (i < cmd->argc - 1) {
@@ -81,9 +81,9 @@ char *str_of_command(const command *cmd) {
                 snprintf(result + marker, strlen(cmd->argv[i]->value.simple) + 1, "%s", cmd->argv[i]->value.simple);
         } else {
             char *substitution = str_of_pipeline(cmd->argv[i]->value.substitution);
-            marker += snprintf(result + marker, 3, "%s", "<(");
+            marker += snprintf(result + marker, 4, "%s", "<( ");
             marker += snprintf(result + marker, strlen(substitution) + 1, "%s", substitution);
-            marker += snprintf(result + marker, 2, "%s", ")");
+            marker += snprintf(result + marker, 3, "%s", " )");
             free(substitution);
         }
 

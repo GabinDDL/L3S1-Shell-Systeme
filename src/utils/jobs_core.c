@@ -4,13 +4,13 @@
 #include "int_utils.h"
 #include <assert.h>
 #include <errno.h>
-#include <inttypes.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <unistd.h>
 
 int job_number = 0;
 job **jobs = NULL;
@@ -241,28 +241,52 @@ int update_status_of_process(process *p) {
 }
 
 int update_status_of_job(job *j) {
-    int status;
-    int res = waitpid(j->pid_leader, &status, WNOHANG | WUNTRACED | WCONTINUED);
+    Status st = j->status;
+    unsigned pre_nkilled = 0;
 
-    if (res < 0) {
-        assert(errno == ECHILD);
-
-        j->status = DETACHED;
-    } else if (res > 0) {
-        if (WIFEXITED(status)) {
-            j->status = DONE;
-        } else if (WIFSIGNALED(status)) {
-            j->status = KILLED;
-        } else if (WIFSTOPPED(status)) {
-            j->status = STOPPED;
-            print_job(j, false);
-        } else if (WIFCONTINUED(status)) {
-            j->status = RUNNING;
-            print_job(j, false);
+    for (unsigned i = 0; i < j->process_number; i++) {
+        if (j->job_process[i]->status == KILLED) {
+            pre_nkilled++;
         }
     }
+
     for (unsigned i = 0; i < j->process_number; i++) {
         update_status_of_process(j->job_process[i]);
+    }
+    unsigned ndone = 0;
+    unsigned nkilled = 0;
+    unsigned nrunning = 0;
+    unsigned nstopped = 0;
+    unsigned ndetached = 0;
+    for (unsigned i = 0; i < j->process_number; i++) {
+        if (j->job_process[i]->status == DONE) {
+            ndone++;
+        } else if (j->job_process[i]->status == KILLED) {
+            nkilled++;
+        } else if (j->job_process[i]->status == RUNNING) {
+            nrunning++;
+        } else if (j->job_process[i]->status == STOPPED) {
+            nstopped++;
+        } else if (j->job_process[i]->status == DETACHED) {
+            ndetached++;
+        }
+    }
+    if (nrunning >= 1) {
+        j->status = RUNNING;
+        if (st == STOPPED) {
+            print_job(j, false);
+        }
+    } else if (nstopped >= 1) {
+        j->status = STOPPED;
+        if (st == RUNNING) {
+            print_job(j, false);
+        }
+    } else if (ndetached == j->process_number) {
+        j->status = DETACHED;
+    } else if (pre_nkilled < nkilled) {
+        j->status = KILLED;
+    } else {
+        j->status = DONE;
     }
     return SUCCESS;
 }

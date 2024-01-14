@@ -134,9 +134,6 @@ process_substitution_output fd_from_subtitution_arg_with_pipe(argument *sub_arg,
         close(tube[1]);
         process_substitution_output output = {pid, tube[0]};
 
-        for (size_t i = 0; i < pip->command_count - 1; i++) {
-            waitpid(pids[i], NULL, 0);
-        }
         if (j->pgid == -1) {
             setpgid(pid, pid);
             pid_t pgid = getpgid(pid);
@@ -328,20 +325,27 @@ int run_command_without_redirections(command_without_substitution *cmd_without_s
                 print_job(j, true);
                 return SUCCESS;
             } else {
+
                 tcsetpgrp(STDERR_FILENO, getpgid(pid));
-                unsigned i = 0;
-                for (i = 0; i < j->process_number; i++) {
-                    waitpid(pid, &status, WUNTRACED);
-                    if (WIFSTOPPED(status)) {
-                        pip->to_job = true;
-                        j->status = STOPPED;
-                        add_job_to_jobs(j);
-                        print_job(j, true);
-                        j->pipeline->to_job = true;
-                        break;
-                    }
-                }
-                if (i == j->process_number) {
+
+                waitpid(pid, &status, WUNTRACED);
+                if (WIFSTOPPED(status)) {
+                    pip->to_job = true;
+                    j->status = STOPPED;
+                    add_job_to_jobs(j);
+                    print_job(j, true);
+                    j->pipeline->to_job = true;
+                    j->job_process[j->process_number - 1]->status = STOPPED;
+                } else if (WIFSIGNALED(status)) {
+                    j->job_process[j->process_number - 1]->status = KILLED;
+
+                    j->pipeline->to_job = false;
+                    j->pipeline = NULL;
+
+                    free_job(j);
+                } else if (WIFEXITED(status)) {
+                    j->job_process[j->process_number - 1]->status = DONE;
+
                     j->pipeline->to_job = false;
                     j->pipeline = NULL;
 
@@ -350,6 +354,8 @@ int run_command_without_redirections(command_without_substitution *cmd_without_s
 
                 tcsetpgrp(STDERR_FILENO, getpgrp());
 
+                fflush(stderr);
+                fflush(stdout);
                 return WEXITSTATUS(status);
             }
         }

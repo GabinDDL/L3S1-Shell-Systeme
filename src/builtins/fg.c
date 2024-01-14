@@ -32,14 +32,14 @@ int fg(const command_without_substitution *cmd) {
     int status;
     job *j = jobs[job_placement];
     pid_t pgid = j->pgid;
-    pid_t pid_leader = j->pid_leader;
     tcsetpgrp(STDERR_FILENO, pgid);
     killpg(pgid, SIGCONT);
 
-    waitpid(pid_leader, &status, WUNTRACED);
+    waitpid(j->job_process[j->process_number - 1]->pid, &status, WUNTRACED);
 
     if (WIFSTOPPED(status)) {
         j->status = STOPPED;
+        j->job_process[j->process_number - 1]->status = STOPPED;
         print_job(j, false);
     } else {
         remove_job_from_jobs(j->id);
