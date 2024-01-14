@@ -32,6 +32,8 @@ extern job **jobs;
 
 /* FUNCTIONS */
 
+void free_job(job *);
+
 char *simple_str_of_job(job *, bool);
 /**
  * Prints all informations from a job on a single line
@@ -46,6 +48,11 @@ void print_job(job *, bool);
  * Print the job, and add '+' if it's a new one
  */
 
+job *init_job_to_add(pid_t, pid_t, pipeline *, Status);
+/**
+ * Init a new job, which could be add to jobs
+ */
+
 void free_jobs_core();
 /* Free allocation of all jobs and their pipelines */
 
@@ -58,9 +65,6 @@ int get_jobs_placement_with_id(unsigned);
 
 int add_job_to_jobs(job *);
 /* Adds a new job to the job list, and returns SUCCESS if the command succeeds */
-
-int add_new_forked_process_to_jobs(pid_t, pid_t, pipeline *, Status);
-/* Adds a new fork with the pipeline to the job list, and returns SUCCESS if the command succeeds */
 
 int add_process_to_job(unsigned, pid_t, command *, Status);
 /* Adds a new process to the job containing the id */

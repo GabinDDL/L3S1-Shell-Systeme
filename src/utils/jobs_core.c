@@ -168,22 +168,6 @@ int add_job_to_jobs(job *j) {
     jobs = temp;
 
     job_number++;
-
-    return SUCCESS;
-}
-
-int add_new_forked_process_to_jobs(pid_t pgid, pid_t pid, pipeline *pip, Status s) {
-    job *new_job = init_job_to_add(pgid, pid, pip, s);
-
-    if (new_job == NULL) {
-        return EXIT_FAILURE;
-    }
-    int res = add_job_to_jobs(new_job);
-
-    if (res != 0) {
-        return res;
-    }
-    print_job(new_job, true);
     return SUCCESS;
 }
 

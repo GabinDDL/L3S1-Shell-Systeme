@@ -16,7 +16,7 @@ char *fd_to_proc_path(int fd) {
     return proc_path;
 }
 
-int fd_from_subtitution_arg_with_pipe(argument *sub_arg) {
+int fd_from_subtitution_arg_with_pipe(argument *sub_arg, job *j) {
     assert(sub_arg != NULL);
     assert(sub_arg->type == ARG_SUBSTITUTION);
     pipeline *pip = sub_arg->value.substitution;
@@ -36,7 +36,7 @@ int fd_from_subtitution_arg_with_pipe(argument *sub_arg) {
         dup2(tube[1], STDOUT_FILENO);
         close(tube[1]);
 
-        run_pipeline(pip);
+        run_pipeline(pip, j);
         exit(SUCCESS);
         break;
     default:
@@ -45,7 +45,7 @@ int fd_from_subtitution_arg_with_pipe(argument *sub_arg) {
     }
 }
 
-command_without_substitution *prepare_command(command *cmd) {
+command_without_substitution *prepare_command(command *cmd, job *j) {
     assert(cmd != NULL);
 
     if (cmd->name == NULL) {
@@ -77,7 +77,7 @@ command_without_substitution *prepare_command(command *cmd) {
         if (cmd->argv[i]->type == ARG_SIMPLE) {
             cmd_without_substitution->argv[i] = strdup(cmd->argv[i]->value.simple);
         } else if (cmd->argv[i]->type == ARG_SUBSTITUTION) {
-            int fd = fd_from_subtitution_arg_with_pipe(cmd->argv[i]);
+            int fd = fd_from_subtitution_arg_with_pipe(cmd->argv[i], j);
             cmd_without_substitution->argv[i] = strdup(fd_to_proc_path(fd));
         }
     }
@@ -96,18 +96,14 @@ command_without_substitution *prepare_command(command *cmd) {
     return cmd_without_substitution;
 }
 
-int run_command_without_redirections(const command_without_substitution *cmd_without_subst, bool already_forked,
-                                     pipeline *pip) {
-    int return_value = 0;
+bool is_intern_command(const char *cmd_name) {
+    return strcmp(cmd_name, "pwd") == 0 || strcmp(cmd_name, "cd") == 0 || strcmp(cmd_name, "exit") == 0 ||
+           strcmp(cmd_name, "?") == 0 || strcmp(cmd_name, "jobs") == 0 || strcmp(cmd_name, "kill") == 0 ||
+           strcmp(cmd_name, "bg") == 0 || strcmp(cmd_name, "fg") == 0;
+}
 
-    if (cmd_without_subst->name == NULL) {
-        return_value = last_command_exit_value;
-
-        fflush(stderr);
-        fflush(stdout);
-        return return_value;
-    }
-
+int run_intern_command(const command_without_substitution *cmd_without_subst) {
+    int return_value;
     if (strcmp(cmd_without_subst->argv[0], "pwd") == 0) {
         return_value = pwd(cmd_without_subst);
     } else if (strcmp(cmd_without_subst->argv[0], "cd") == 0) {
@@ -126,40 +122,89 @@ int run_command_without_redirections(const command_without_substitution *cmd_wit
         return_value = bg(cmd_without_subst);
     } else if (strcmp(cmd_without_subst->argv[0], "fg") == 0) {
         return_value = fg(cmd_without_subst);
-    } else {
-        if (already_forked) {
-            return_value = extern_command(cmd_without_subst);
+    }
+    return return_value;
+}
+
+int run_command_without_redirections(const command_without_substitution *cmd_without_subst, bool already_forked,
+                                     pipeline *pip, job *j) {
+    int return_value = 0;
+
+    if (cmd_without_subst->name == NULL) {
+        return_value = last_command_exit_value;
+
+        fflush(stderr);
+        fflush(stdout);
+        return return_value;
+    }
+    if (already_forked) {
+        if (is_intern_command(cmd_without_subst->argv[0])) {
+            return_value = run_intern_command(cmd_without_subst);
         } else {
-            int status; // status of the created process
-            pid_t pid = fork();
+            return_value = extern_command(cmd_without_subst);
+        }
+        return return_value;
+    }
 
-            assert(pid != -1);
+    if (!pip->to_job && is_intern_command(cmd_without_subst->argv[0])) {
+        return_value = run_intern_command(cmd_without_subst);
+        j->pipeline = NULL;
+        free_job(j);
+        return return_value;
+    }
 
-            switch (pid) {
-            case 0:
-                reset_signal_management();
-                return_value = extern_command(cmd_without_subst);
-                use_jsh_signal_management();
-                if (return_value < 0) {
-                    perror("execvp");
-                    exit(errno);
-                }
-                exit(SUCCESS);
-                break;
-            default:
-                setpgid(pid, pid);
-                pid_t pgid = getpgid(pid);
-                tcsetpgrp(STDERR_FILENO, getpgid(pid));
-                waitpid(pid, &status, WUNTRACED);
-                if (WIFSTOPPED(status)) {
-                    pip->to_job = true;
-                    add_new_forked_process_to_jobs(pgid, pid, pip, STOPPED);
-                }
-                tcsetpgrp(STDERR_FILENO, getpgrp());
-                return WEXITSTATUS(status);
+    int status; // status of the created process
+    pid_t pid = fork();
+
+    assert(pid != -1);
+
+    switch (pid) {
+    case 0:
+        if (is_intern_command(cmd_without_subst->argv[0])) {
+            return_value = run_intern_command(cmd_without_subst);
+            exit(return_value);
+        }
+        reset_signal_management();
+        return_value = extern_command(cmd_without_subst);
+        use_jsh_signal_management();
+        if (return_value < 0) {
+            perror("execvp");
+            exit(errno);
+        }
+        exit(SUCCESS);
+        break;
+    default:
+        setpgid(pid, pid);
+        pid_t pgid = getpgid(pid);
+
+        j->pid_leader = pid;
+        j->pgid = pgid;
+        j->status = RUNNING;
+
+        if (pip->to_job) {
+            add_job_to_jobs(j);
+            print_job(j, true);
+            return SUCCESS;
+        } else {
+            tcsetpgrp(STDERR_FILENO, getpgid(pid));
+            waitpid(pid, &status, WUNTRACED);
+            if (WIFSTOPPED(status)) {
+                pip->to_job = true;
+                j->status = STOPPED;
+                add_job_to_jobs(j);
+                print_job(j, true);
+                j->pipeline->to_job = true;
+            } else {
+                j->pipeline->to_job = false;
+                j->pipeline = NULL;
+
+                free_job(j);
             }
+            tcsetpgrp(STDERR_FILENO, getpgrp());
+            return WEXITSTATUS(status);
         }
     }
+
     fflush(stderr);
     fflush(stdout);
     return return_value;
@@ -183,7 +228,7 @@ int get_flags(const redirection *redirection) {
     return flags;
 }
 
-int run_command(command *cmd, bool already_forked, pipeline *pip) {
+int run_command(command *cmd, bool already_forked, pipeline *pip, job *j) {
 
     int return_value = 0;
 
@@ -208,7 +253,7 @@ int run_command(command *cmd, bool already_forked, pipeline *pip) {
                 assert(sub_arg != NULL);
                 sub_arg->type = ARG_SUBSTITUTION;
                 sub_arg->value.substitution = pip;
-                fd_in = fd_from_subtitution_arg_with_pipe(sub_arg);
+                fd_in = fd_from_subtitution_arg_with_pipe(sub_arg, j);
                 free(substitution);
                 free(sub_arg);
             } else {
@@ -270,8 +315,8 @@ int run_command(command *cmd, bool already_forked, pipeline *pip) {
         }
     }
 
-    command_without_substitution *cmd_without_subst = prepare_command(cmd);
-    return_value = run_command_without_redirections(cmd_without_subst, already_forked, pip);
+    command_without_substitution *cmd_without_subst = prepare_command(cmd, j);
+    return_value = run_command_without_redirections(cmd_without_subst, already_forked, pip, j);
 
     if (cmd_without_subst != NULL) {
         free_command_without_substitution(cmd_without_subst);
@@ -319,7 +364,7 @@ void free_tubes(int **tubes, size_t size) {
     free(tubes);
 }
 
-int run_commands_of_pipeline(pipeline *pip, int fd_out) {
+int run_commands_of_pipeline(pipeline *pip, job *j) {
     int run_output = 0;
 
     pid_t pids[pip->command_count - 1];
@@ -335,15 +380,10 @@ int run_commands_of_pipeline(pipeline *pip, int fd_out) {
                 dup2(tubes[i - 1][0], STDIN_FILENO);
                 close(tubes[i - 1][0]);
             }
-            run_output = run_command(pip->commands[i], true, pip);
+            run_output = run_command(pip->commands[i], true, pip, j);
 
             exit(run_output);
         }
-    }
-    if (pip->to_job) {
-        int res = write(fd_out, pids, sizeof(pid_t) * (pip->command_count - 1));
-        assert(res >= 0);
-        close(fd_out);
     }
 
     close_fd_of_tubes_except(tubes, pip->command_count - 1, pip->command_count - 2, pip->command_count);
@@ -353,7 +393,7 @@ int run_commands_of_pipeline(pipeline *pip, int fd_out) {
     close(tubes[pip->command_count - 2][0]);
 
     free_tubes(tubes, pip->command_count - 1);
-    run_output = run_command(pip->commands[pip->command_count - 1], pip->to_job, pip);
+    run_output = run_command(pip->commands[pip->command_count - 1], false, pip, j);
 
     dup2(stdin_copy, STDIN_FILENO);
     close(stdin_copy);
@@ -364,7 +404,7 @@ int run_commands_of_pipeline(pipeline *pip, int fd_out) {
     return run_output;
 }
 
-int run_pipeline(pipeline *pip) {
+int run_pipeline(pipeline *pip, job *j) {
     assert(pip != NULL);
     if (pip->command_count == 0) {
         return last_command_exit_value;
@@ -372,51 +412,10 @@ int run_pipeline(pipeline *pip) {
     int run_output = 0;
     unsigned njob = job_number;
 
-    if (pip->to_job) {
-        int tube_process[2];
-
-        if (pip->command_count > 1) {
-            pipe(tube_process);
-        }
-        pid_t pid = fork();
-        if (pid == -1) {
-            print_error("fork: error to create a process");
-        }
-        if (pid == 0) {
-            if (pip->command_count > 1) {
-                close(tube_process[0]);
-                run_commands_of_pipeline(pip, tube_process[1]);
-                exit(run_output);
-            } else {
-                run_output = run_command(pip->commands[0], true, pip);
-                exit(run_output);
-            }
-        } else {
-            setpgid(pid, pid);
-            pid_t pgid = getpgid(pid);
-            run_output = add_new_forked_process_to_jobs(pgid, pid, pip, RUNNING);
-            if (pip->command_count > 1) {
-                pid_t *pids = malloc((pip->command_count - 1) * sizeof(pid_t));
-                int res = read(tube_process[0], pids, sizeof(pid_t) * (pip->command_count - 1));
-                assert(res >= 0);
-                close(tube_process[0]);
-                close(tube_process[1]);
-
-                unsigned job_id = jobs[job_number - 1]->id;
-
-                for (size_t i = 0; i < pip->command_count - 1; i++) {
-                    setpgid(pids[i], pgid);
-                    add_process_to_job(job_id, pids[i], pip->commands[i + 1], RUNNING);
-                }
-                free(pids);
-            }
-        }
+    if (pip->command_count > 1) {
+        run_commands_of_pipeline(pip, j);
     } else {
-        if (pip->command_count > 1) {
-            run_commands_of_pipeline(pip, -1);
-        } else {
-            run_output = run_command(pip->commands[0], false, pip);
-        }
+        run_output = run_command(pip->commands[0], false, pip, j);
     }
     if (njob != job_number) {
         update_prompt();
@@ -432,7 +431,8 @@ int run_pipeline_list(pipeline_list *pips) {
     }
     int run_output = 0;
     for (size_t i = 0; i < pips->pipeline_count; i++) {
-        run_output = run_pipeline(pips->pipelines[i]);
+        job *j = init_job_to_add(0, 0, pips->pipelines[i], RUNNING);
+        run_output = run_pipeline(pips->pipelines[i], j);
     }
     return run_output;
 }

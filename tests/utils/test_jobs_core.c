@@ -85,6 +85,7 @@ void test_add_job_to_jobs() {
     assert(job_number == 0);
 
     job *j1 = malloc(sizeof(job));
+    j1->status = RUNNING;
     add_job_to_jobs(j1);
 
     assert(jobs != NULL);
@@ -92,6 +93,7 @@ void test_add_job_to_jobs() {
     assert(jobs[0] == j1);
 
     job *j2 = malloc(sizeof(job));
+    j2->status = RUNNING;
     add_job_to_jobs(j2);
 
     assert(jobs != NULL);
@@ -100,6 +102,7 @@ void test_add_job_to_jobs() {
     assert(jobs[1] == j2);
 
     job *j3 = malloc(sizeof(job));
+    j3->status = RUNNING;
     add_job_to_jobs(j3);
 
     assert(jobs != NULL);
@@ -109,6 +112,8 @@ void test_add_job_to_jobs() {
     assert(jobs[2] == j3);
 
     job *j4 = malloc(sizeof(job));
+
+    j4->status = RUNNING;
     add_job_to_jobs(j4);
 
     assert(jobs != NULL);
@@ -134,6 +139,7 @@ void test_remove_job_from_jobs() {
     j1->id = 0;
     j1->pipeline = NULL;
     j1->job_process = NULL;
+    j1->status = RUNNING;
     add_job_to_jobs(j1);
 
     assert(remove_job_from_jobs(0) == SUCCESS);
@@ -144,14 +150,17 @@ void test_remove_job_from_jobs() {
     j2->id = 1;
     j2->pipeline = NULL;
     j2->job_process = NULL;
+    j2->status = RUNNING;
     job *j3 = malloc(sizeof(job));
     j3->id = 2;
     j3->pipeline = NULL;
     j3->job_process = NULL;
+    j3->status = RUNNING;
     job *j4 = malloc(sizeof(job));
     j4->id = 3;
     j4->pipeline = NULL;
     j4->job_process = NULL;
+    j4->status = RUNNING;
 
     j1 = malloc(sizeof(job));
     j1->id = 0;
