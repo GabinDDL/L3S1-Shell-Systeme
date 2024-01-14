@@ -13,6 +13,7 @@ typedef struct process {
     pid_t pid;
     Status status;
     command *cmd;
+    command_without_substitution *cmd_without_subst;
 } process;
 
 typedef struct job {
@@ -66,7 +67,7 @@ int get_jobs_placement_with_id(unsigned);
 int add_job_to_jobs(job *);
 /* Adds a new job to the job list, and returns SUCCESS if the command succeeds */
 
-int add_process_to_job(unsigned, pid_t, command *, Status);
+int add_process_to_job(job *, pid_t, command *, command_without_substitution *, Status);
 /* Adds a new process to the job containing the id */
 
 int remove_job_from_jobs(unsigned);

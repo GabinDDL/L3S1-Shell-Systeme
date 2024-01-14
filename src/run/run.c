@@ -10,19 +10,109 @@
 #include <time.h>
 #include <unistd.h>
 
+command_without_substitution *prepare_command(command *, job *);
+int **init_tubes(size_t);
+void close_fd_of_tubes_except(int **, size_t, int, int);
+void free_tubes(int **, size_t);
+
 char *fd_to_proc_path(int fd) {
     static char proc_path[256];
     sprintf(proc_path, "/proc/self/fd/%d", fd);
     return proc_path;
 }
 
-int fd_from_subtitution_arg_with_pipe(argument *sub_arg, job *j) {
+process_substitution_output fd_from_subtitution_arg_with_pipe(argument *sub_arg, job *j) {
     assert(sub_arg != NULL);
     assert(sub_arg->type == ARG_SUBSTITUTION);
     pipeline *pip = sub_arg->value.substitution;
     assert(pip != NULL);
     assert(pip->command_count > 0);
     assert(pip->commands[0] != NULL);
+
+    if (pip->command_count == 1) {
+        command_without_substitution *cmd_without_subst = prepare_command(pip->commands[0], j);
+        int tube[2];
+        assert(pipe(tube) >= 0);
+
+        pid_t pid = fork();
+        assert(pid != -1);
+
+        switch (pid) {
+        case 0:
+            close(tube[0]);
+            dup2(tube[1], STDOUT_FILENO);
+            close(tube[1]);
+
+            run_command(cmd_without_subst, true, pip, j, false);
+
+            exit(SUCCESS);
+            break;
+        default:
+            close(tube[1]);
+            process_substitution_output output = {pid, tube[0]};
+            if (j->pgid == -1) {
+                setpgid(pid, pid);
+                pid_t pgid = getpgid(pid);
+
+                j->pid_leader = pid;
+                j->pgid = pgid;
+                j->status = RUNNING;
+            } else {
+                setpgid(pid, j->pgid);
+            }
+            add_process_to_job(j, pid, pip->commands[0], cmd_without_subst, RUNNING);
+
+            return output;
+        }
+    }
+
+    pid_t pids[pip->command_count - 1];
+    int **tubes = init_tubes(pip->command_count - 1);
+
+    command_without_substitution **cmds_without_subst =
+        malloc(sizeof(command_without_substitution *) * pip->command_count);
+    assert(cmds_without_subst != NULL);
+
+    for (int i = 0; i < pip->command_count - 1; i++) {
+        cmds_without_subst[i] = prepare_command(pip->commands[i], j);
+
+        pids[i] = fork();
+        if (pids[i] == 0) {
+            close_fd_of_tubes_except(tubes, pip->command_count - 1, i - 1, i);
+            dup2(tubes[i][1], STDOUT_FILENO);
+            close(tubes[i][1]);
+            if (i != 0) {
+                dup2(tubes[i - 1][0], STDIN_FILENO);
+                close(tubes[i - 1][0]);
+            }
+            run_command(cmds_without_subst[i], true, pip, j, false);
+
+            close(tubes[i][0]);
+            exit(SUCCESS);
+        } else {
+            if (j->pgid == -1) {
+                setpgid(pids[i], pids[i]);
+                pid_t pgid = getpgid(pids[i]);
+
+                j->pid_leader = pids[i];
+                j->pgid = pgid;
+                j->status = RUNNING;
+            } else {
+                setpgid(pids[i], j->pgid);
+            }
+            add_process_to_job(j, pids[i], pip->commands[i], cmds_without_subst[i], RUNNING);
+        }
+    }
+
+    close_fd_of_tubes_except(tubes, pip->command_count - 1, pip->command_count - 2, pip->command_count);
+
+    int stdin_copy = dup(STDIN_FILENO);
+    dup2(tubes[pip->command_count - 2][0], STDIN_FILENO);
+    close(tubes[pip->command_count - 2][0]);
+
+    free_tubes(tubes, pip->command_count - 1);
+
+    cmds_without_subst[pip->command_count - 1] = prepare_command(pip->commands[pip->command_count - 1], j);
 
     int tube[2];
     assert(pipe(tube) >= 0);
@@ -36,12 +126,40 @@ int fd_from_subtitution_arg_with_pipe(argument *sub_arg, job *j) {
         dup2(tube[1], STDOUT_FILENO);
         close(tube[1]);
 
-        run_pipeline(pip, j);
+        run_command(cmds_without_subst[pip->command_count - 1], false, pip, j, true);
+
         exit(SUCCESS);
         break;
     default:
         close(tube[1]);
-        return tube[0];
+        process_substitution_output output = {pid, tube[0]};
+
+        for (size_t i = 0; i < pip->command_count - 1; i++) {
+            waitpid(pids[i], NULL, 0);
+        }
+        if (j->pgid == -1) {
+            setpgid(pid, pid);
+            pid_t pgid = getpgid(pid);
+
+            j->pid_leader = pid;
+            j->pgid = pgid;
+            j->status = RUNNING;
+        } else {
+            setpgid(pid, j->pgid);
+        }
+        add_process_to_job(j, pid, pip->commands[pip->command_count - 1], cmds_without_subst[pip->command_count - 1],
+                           RUNNING);
+
+        for (size_t i = 0; i < pip->command_count; i++) {
+            cmds_without_subst[i] = NULL;
+        }
+
+        free(cmds_without_subst);
+
+        dup2(stdin_copy, STDIN_FILENO);
+        close(stdin_copy);
+
+        return output;
     }
 }
 
@@ -69,16 +187,26 @@ command_without_substitution *prepare_command(command *cmd, job *j) {
     assert(cmd_without_substitution != NULL);
 
     cmd_without_substitution->name = strdup(cmd->name);
+    assert(cmd_without_substitution->name != NULL);
+
     cmd_without_substitution->argc = cmd->argc;
     cmd_without_substitution->argv = malloc(sizeof(char *) * (cmd->argc + 1));
     assert(cmd_without_substitution->argv != NULL);
 
+    cmd_without_substitution->pids = malloc(sizeof(pid_t) * MAX_TOKENS);
+    assert(cmd_without_substitution->pids != NULL);
+    cmd_without_substitution->pid_count = 0;
+
     for (size_t i = 0; i < cmd->argc; ++i) {
         if (cmd->argv[i]->type == ARG_SIMPLE) {
             cmd_without_substitution->argv[i] = strdup(cmd->argv[i]->value.simple);
+            assert(cmd_without_substitution->argv[i] != NULL);
         } else if (cmd->argv[i]->type == ARG_SUBSTITUTION) {
-            int fd = fd_from_subtitution_arg_with_pipe(cmd->argv[i], j);
-            cmd_without_substitution->argv[i] = strdup(fd_to_proc_path(fd));
+            process_substitution_output output = fd_from_subtitution_arg_with_pipe(cmd->argv[i], j);
+            cmd_without_substitution->argv[i] = strdup(fd_to_proc_path(output.fd));
+            assert(cmd_without_substitution->argv[i] != NULL);
+            cmd_without_substitution->pids[cmd_without_substitution->pid_count] = output.pid;
+            cmd_without_substitution->pid_count++;
         }
     }
     cmd_without_substitution->argv[cmd->argc] = NULL;
@@ -102,7 +230,7 @@ bool is_intern_command(const char *cmd_name) {
            strcmp(cmd_name, "bg") == 0 || strcmp(cmd_name, "fg") == 0;
 }
 
-int run_intern_command(const command_without_substitution *cmd_without_subst) {
+int run_intern_command(command_without_substitution *cmd_without_subst) {
     int return_value;
     if (strcmp(cmd_without_subst->argv[0], "pwd") == 0) {
         return_value = pwd(cmd_without_subst);
@@ -126,8 +254,8 @@ int run_intern_command(const command_without_substitution *cmd_without_subst) {
     return return_value;
 }
 
-int run_command_without_redirections(const command_without_substitution *cmd_without_subst, bool already_forked,
-                                     pipeline *pip, job *j) {
+int run_command_without_redirections(command_without_substitution *cmd_without_subst, bool already_forked,
+                                     pipeline *pip, job *j, bool is_leader) {
     int return_value = 0;
 
     if (cmd_without_subst->name == NULL) {
@@ -135,6 +263,9 @@ int run_command_without_redirections(const command_without_substitution *cmd_wit
 
         fflush(stderr);
         fflush(stdout);
+
+        free_command_without_substitution(cmd_without_subst);
+
         return return_value;
     }
     if (already_forked) {
@@ -146,10 +277,11 @@ int run_command_without_redirections(const command_without_substitution *cmd_wit
         return return_value;
     }
 
-    if (!pip->to_job && is_intern_command(cmd_without_subst->argv[0])) {
-        return_value = run_intern_command(cmd_without_subst);
+    if (!pip->to_job && is_intern_command(cmd_without_subst->argv[0]) && is_leader) {
         j->pipeline = NULL;
         free_job(j);
+        return_value = run_intern_command(cmd_without_subst);
+        free_command_without_substitution(cmd_without_subst);
         return return_value;
     }
 
@@ -160,6 +292,9 @@ int run_command_without_redirections(const command_without_substitution *cmd_wit
 
     switch (pid) {
     case 0:
+        for (size_t i = 0; i < cmd_without_subst->pid_count; i++) {
+            waitpid(cmd_without_subst->pids[i], NULL, 0);
+        }
         if (is_intern_command(cmd_without_subst->argv[0])) {
             return_value = run_intern_command(cmd_without_subst);
             exit(return_value);
@@ -174,34 +309,49 @@ int run_command_without_redirections(const command_without_substitution *cmd_wit
         exit(SUCCESS);
         break;
     default:
-        setpgid(pid, pid);
-        pid_t pgid = getpgid(pid);
+        if (j->pgid == -1) {
+            setpgid(pid, pid);
+            pid_t pgid = getpgid(pid);
 
-        j->pid_leader = pid;
-        j->pgid = pgid;
-        j->status = RUNNING;
-
-        if (pip->to_job) {
-            add_job_to_jobs(j);
-            print_job(j, true);
-            return SUCCESS;
+            j->pid_leader = pid;
+            j->pgid = pgid;
+            j->status = RUNNING;
         } else {
-            tcsetpgrp(STDERR_FILENO, getpgid(pid));
-            waitpid(pid, &status, WUNTRACED);
-            if (WIFSTOPPED(status)) {
-                pip->to_job = true;
-                j->status = STOPPED;
+            setpgid(pid, j->pgid);
+        }
+
+        add_process_to_job(j, pid, pip->commands[0], cmd_without_subst, RUNNING);
+
+        if (is_leader) {
+            if (pip->to_job) {
                 add_job_to_jobs(j);
                 print_job(j, true);
-                j->pipeline->to_job = true;
+                return SUCCESS;
             } else {
-                j->pipeline->to_job = false;
-                j->pipeline = NULL;
+                tcsetpgrp(STDERR_FILENO, getpgid(pid));
+                unsigned i = 0;
+                for (i = 0; i < j->process_number; i++) {
+                    waitpid(pid, &status, WUNTRACED);
+                    if (WIFSTOPPED(status)) {
+                        pip->to_job = true;
+                        j->status = STOPPED;
+                        add_job_to_jobs(j);
+                        print_job(j, true);
+                        j->pipeline->to_job = true;
+                        break;
+                    }
+                }
+                if (i == j->process_number) {
+                    j->pipeline->to_job = false;
+                    j->pipeline = NULL;
 
-                free_job(j);
+                    free_job(j);
+                }
+
+                tcsetpgrp(STDERR_FILENO, getpgrp());
+
+                return WEXITSTATUS(status);
             }
-            tcsetpgrp(STDERR_FILENO, getpgrp());
-            return WEXITSTATUS(status);
         }
     }
 
@@ -228,7 +378,8 @@ int get_flags(const redirection *redirection) {
     return flags;
 }
 
-int run_command(command *cmd, bool already_forked, pipeline *pip, job *j) {
+int run_command(command_without_substitution *cmd_without_subst, bool already_forked, pipeline *pip, job *j,
+                bool is_leader) {
 
     int return_value = 0;
 
@@ -237,9 +388,9 @@ int run_command(command *cmd, bool already_forked, pipeline *pip, job *j) {
     int stderr_copy = dup(STDERR_FILENO);
 
     int fd_in, fd_out, fd_err;
-    for (size_t i = 0; i < cmd->redirection_count; ++i) {
-        if (cmd->redirections[i].type == REDIRECT_STDIN) {
-            char *filename = cmd->redirections[i].filename;
+    for (size_t i = 0; i < cmd_without_subst->redirection_count; ++i) {
+        if (cmd_without_subst->redirections[i].type == REDIRECT_STDIN) {
+            char *filename = cmd_without_subst->redirections[i].filename;
 
             if (is_substitution(filename)) {
                 char *substitution = strdup(filename + 2);
@@ -253,11 +404,14 @@ int run_command(command *cmd, bool already_forked, pipeline *pip, job *j) {
                 assert(sub_arg != NULL);
                 sub_arg->type = ARG_SUBSTITUTION;
                 sub_arg->value.substitution = pip;
-                fd_in = fd_from_subtitution_arg_with_pipe(sub_arg, j);
+                process_substitution_output output = fd_from_subtitution_arg_with_pipe(sub_arg, j);
+                fd_in = output.fd;
+                cmd_without_subst->pids[cmd_without_subst->pid_count] = output.pid;
+                cmd_without_subst->pid_count++;
                 free(substitution);
                 free(sub_arg);
             } else {
-                fd_in = open(cmd->redirections[i].filename, O_RDONLY);
+                fd_in = open(cmd_without_subst->redirections[i].filename, O_RDONLY);
             }
 
             if (fd_in == -1) {
@@ -274,11 +428,13 @@ int run_command(command *cmd, bool already_forked, pipeline *pip, job *j) {
                 perror("close");
                 return EXIT_FAILURE;
             }
-        } else if (cmd->redirections[i].type == REDIRECT_STDOUT) {
-            fd_out = open(cmd->redirections[i].filename, get_flags(&cmd->redirections[i]), 0666);
+        } else if (cmd_without_subst->redirections[i].type == REDIRECT_STDOUT) {
+            fd_out =
+                open(cmd_without_subst->redirections[i].filename, get_flags(&cmd_without_subst->redirections[i]), 0666);
             if (fd_out == -1) {
                 if (errno == EEXIST) {
-                    fprintf(stderr, "jsh: %s: cannot overwrite existing file\n", cmd->redirections[i].filename);
+                    fprintf(stderr, "jsh: %s: cannot overwrite existing file\n",
+                            cmd_without_subst->redirections[i].filename);
                     return 1;
                 } else {
                     perror("open");
@@ -293,11 +449,13 @@ int run_command(command *cmd, bool already_forked, pipeline *pip, job *j) {
                 perror("close");
                 return EXIT_FAILURE;
             }
-        } else if (cmd->redirections[i].type == REDIRECT_STDERR) {
-            fd_err = open(cmd->redirections[i].filename, get_flags(&cmd->redirections[i]), 0666);
+        } else if (cmd_without_subst->redirections[i].type == REDIRECT_STDERR) {
+            fd_err =
+                open(cmd_without_subst->redirections[i].filename, get_flags(&cmd_without_subst->redirections[i]), 0666);
             if (fd_err == -1) {
                 if (errno == EEXIST) {
-                    fprintf(stderr, "jsh: %s: cannot overwrite existing file\n", cmd->redirections[i].filename);
+                    fprintf(stderr, "jsh: %s: cannot overwrite existing file\n",
+                            cmd_without_subst->redirections[i].filename);
                     return 1;
                 } else {
                     perror("open");
@@ -315,12 +473,7 @@ int run_command(command *cmd, bool already_forked, pipeline *pip, job *j) {
         }
     }
 
-    command_without_substitution *cmd_without_subst = prepare_command(cmd, j);
-    return_value = run_command_without_redirections(cmd_without_subst, already_forked, pip, j);
-
-    if (cmd_without_subst != NULL) {
-        free_command_without_substitution(cmd_without_subst);
-    }
+    return_value = run_command_without_redirections(cmd_without_subst, already_forked, pip, j, is_leader);
 
     dup2(stdin_copy, STDIN_FILENO);
     dup2(stdout_copy, STDOUT_FILENO);
@@ -370,7 +523,13 @@ int run_commands_of_pipeline(pipeline *pip, job *j) {
     pid_t pids[pip->command_count - 1];
     int **tubes = init_tubes(pip->command_count - 1);
 
+    command_without_substitution **cmds_without_subst =
+        malloc(sizeof(command_without_substitution *) * pip->command_count);
+    assert(cmds_without_subst != NULL);
+
     for (int i = 0; i < pip->command_count - 1; i++) {
+        cmds_without_subst[i] = prepare_command(pip->commands[i], j);
+
         pids[i] = fork();
         if (pids[i] == 0) {
             close_fd_of_tubes_except(tubes, pip->command_count - 1, i - 1, i);
@@ -380,9 +539,22 @@ int run_commands_of_pipeline(pipeline *pip, job *j) {
                 dup2(tubes[i - 1][0], STDIN_FILENO);
                 close(tubes[i - 1][0]);
             }
-            run_output = run_command(pip->commands[i], true, pip, j);
+            run_output = run_command(cmds_without_subst[i], true, pip, j, false);
 
+            close(tubes[i][0]);
             exit(run_output);
+        } else {
+            if (j->pgid == -1) {
+                setpgid(pids[i], pids[i]);
+                pid_t pgid = getpgid(pids[i]);
+
+                j->pid_leader = pids[i];
+                j->pgid = pgid;
+                j->status = RUNNING;
+            } else {
+                setpgid(pids[i], j->pgid);
+            }
+            add_process_to_job(j, pids[i], pip->commands[i], cmds_without_subst[i], RUNNING);
         }
     }
 
@@ -393,18 +565,24 @@ int run_commands_of_pipeline(pipeline *pip, job *j) {
     close(tubes[pip->command_count - 2][0]);
 
     free_tubes(tubes, pip->command_count - 1);
-    run_output = run_command(pip->commands[pip->command_count - 1], false, pip, j);
+
+    cmds_without_subst[pip->command_count - 1] = prepare_command(pip->commands[pip->command_count - 1], j);
+
+    run_output = run_command(cmds_without_subst[pip->command_count - 1], false, pip, j, true);
 
     dup2(stdin_copy, STDIN_FILENO);
     close(stdin_copy);
-    for (size_t i = 0; i < pip->command_count - 1; i++) {
-        waitpid(pids[i], NULL, 0);
+
+    for (size_t i = 0; i < pip->command_count; i++) {
+        cmds_without_subst[i] = NULL;
     }
+
+    free(cmds_without_subst);
 
     return run_output;
 }
 
-int run_pipeline(pipeline *pip, job *j) {
+int run_pipeline(pipeline *pip, job *j, bool is_leader) {
     assert(pip != NULL);
     if (pip->command_count == 0) {
         return last_command_exit_value;
@@ -415,7 +593,9 @@ int run_pipeline(pipeline *pip, job *j) {
     if (pip->command_count > 1) {
         run_commands_of_pipeline(pip, j);
     } else {
-        run_output = run_command(pip->commands[0], false, pip, j);
+        command_without_substitution *cmd_without_subst = prepare_command(pip->commands[0], j);
+
+        run_output = run_command(cmd_without_subst, false, pip, j, is_leader);
     }
     if (njob != job_number) {
         update_prompt();
@@ -431,8 +611,8 @@ int run_pipeline_list(pipeline_list *pips) {
     }
     int run_output = 0;
     for (size_t i = 0; i < pips->pipeline_count; i++) {
-        job *j = init_job_to_add(0, 0, pips->pipelines[i], RUNNING);
-        run_output = run_pipeline(pips->pipelines[i], j);
+        job *j = init_job_to_add(-1, -1, pips->pipelines[i], RUNNING);
+        run_output = run_pipeline(pips->pipelines[i], j, true);
     }
     return run_output;
 }

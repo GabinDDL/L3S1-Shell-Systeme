@@ -5,7 +5,7 @@
 
 #include "exit.h"
 
-int exit_jsh(const command_without_substitution *cmd) {
+int exit_jsh(command_without_substitution *cmd) {
     if (cmd->argc > 2) {
         print_error("exit: too many arguments");
         return COMMAND_FAILURE;
@@ -27,6 +27,7 @@ int exit_jsh(const command_without_substitution *cmd) {
             return COMMAND_FAILURE;
         }
     }
+    free_command_without_substitution(cmd);
     free_core();
     exit(exit_value);
 }

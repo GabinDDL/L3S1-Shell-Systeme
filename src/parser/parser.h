@@ -98,6 +98,8 @@ typedef struct {
     char **argv;
     size_t redirection_count;
     redirection *redirections;
+    pid_t *pids;
+    size_t pid_count;
 } command_without_substitution;
 /*
  * A command without substitution is a command with its arguments as strings and redirections.

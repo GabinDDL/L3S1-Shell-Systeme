@@ -14,18 +14,26 @@
 #include "../utils/constants.h"
 #include "../utils/core.h"
 
+typedef struct {
+    pid_t pid;
+    int fd;
+} process_substitution_output;
+/*
+ * Structure to store the pid and the fd of the process substitution
+ */
+
 char *fd_to_proc_path(int fd);
 /*
  * Returns the path of the descriptor in the proc repertory
  */
 
-int fd_from_subtitution_arg_with_pipe(argument *sub_arg, job *j);
+process_substitution_output fd_from_subtitution_arg_with_pipe(argument *sub_arg, job *j);
 /*
  * Returns the descriptor from the substitution created
  */
 
-int run_command_without_redirections(const command_without_substitution *cmd_without_subst, bool is_job, pipeline *pip,
-                                     job *j);
+int run_command_without_redirections(command_without_substitution *cmd_without_subst, bool is_job, pipeline *pip,
+                                     job *j, bool is_leader);
 /* Run a command, without redirection.
  *
  * Parameters:
@@ -34,6 +42,7 @@ int run_command_without_redirections(const command_without_substitution *cmd_wit
  *    not create a new fork again for extern command
  *  - pip : the pipeline of the command
  *  - j : the possibly job of the pipeline
+ *  - is_leader : To know if the command is the leader of the pipeline
  * Returns:
  *  - SUCCESS if the command was run successfully.
  *  - COMMAND_FAILURE if the command failed.
@@ -41,7 +50,7 @@ int run_command_without_redirections(const command_without_substitution *cmd_wit
  *  - Exit value from extern_command if the command was an external command.
  */
 
-int run_command(command *, bool, pipeline *, job *);
+int run_command(command_without_substitution *, bool, pipeline *, job *, bool);
 /* Run a command, with redirection possible.
  *
  * Parameters:
@@ -50,6 +59,7 @@ int run_command(command *, bool, pipeline *, job *);
  *    not create a new fork again for extern command
  *  - pip : the pipeline of the command
  *  - j : the possibly job of the pipeline
+ *  - is_leader : To know if the command is the leader of the pipeline
  * Returns:
  *  - SUCCESS if the command was run successfully.
  *  - COMMAND_FAILURE if the command failed.
@@ -57,7 +67,7 @@ int run_command(command *, bool, pipeline *, job *);
  *  - Exit value from extern_command if the command was an external command.
  */
 
-int run_pipeline(pipeline *, job *);
+int run_pipeline(pipeline *, job *, bool);
 /* Run a pipeline.
  *
  * Parameters:

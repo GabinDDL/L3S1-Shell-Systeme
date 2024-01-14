@@ -866,8 +866,15 @@ void free_command_without_substitution(command_without_substitution *cmd) {
 
     if (cmd->redirections != NULL)
         free(cmd->redirections);
+
     cmd->redirections = NULL;
     cmd->redirection_count = 0;
+
+    if (cmd->pids != NULL)
+        free(cmd->pids);
+
+    cmd->pids = NULL;
+    cmd->pid_count = 0;
 
     free(cmd);
 }

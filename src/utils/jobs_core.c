@@ -24,6 +24,7 @@ void free_job(job *j) {
     }
     if (j->job_process != NULL) {
         for (size_t i = 0; i < j->process_number; i++) {
+            free_command_without_substitution(j->job_process[i]->cmd_without_subst);
             free(j->job_process[i]);
         }
 
@@ -128,12 +129,13 @@ job *init_job_to_add(pid_t pgid, pid_t pid, pipeline *pip, Status s) {
     return new_job;
 }
 
-process *init_process_to_add(pid_t pid, command *cmd, Status s) {
+process *init_process_to_add(pid_t pid, command *cmd, command_without_substitution *cmd_without_subst, Status s) {
     process *p = malloc(sizeof(process));
     assert(p != NULL);
 
     p->pid = pid;
     p->cmd = cmd;
+    p->cmd_without_subst = cmd_without_subst;
     p->status = s;
 
     return p;
@@ -171,9 +173,7 @@ int add_job_to_jobs(job *j) {
     return SUCCESS;
 }
 
-int add_process_to_job(unsigned id, pid_t pid, command *cmd, Status s) {
-    size_t placement = get_jobs_placement_with_id(id);
-    job *j = jobs[placement];
+int add_process_to_job(job *j, pid_t pid, command *cmd, command_without_substitution *cmd_without_subst, Status s) {
     process **new_process = malloc(sizeof(process *) * (j->process_number + 1));
     assert(new_process != NULL);
 
@@ -181,8 +181,9 @@ int add_process_to_job(unsigned id, pid_t pid, command *cmd, Status s) {
         memmove(new_process, j->job_process, j->process_number * sizeof(process *));
         free(j->job_process);
     }
+
     j->job_process = new_process;
-    new_process[j->process_number] = init_process_to_add(pid, cmd, s);
+    new_process[j->process_number] = init_process_to_add(pid, cmd, cmd_without_subst, s);
     j->process_number++;
 
     return SUCCESS;
